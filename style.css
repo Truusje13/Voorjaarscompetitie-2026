@@ -803,3 +803,79 @@ main {
   color: var(--green-dark);
 }
 .check-item-avatar input { accent-color: var(--green-dark); cursor: pointer; }
+
+/* ============================================================
+   STANDINGS TAB
+   ============================================================ */
+.knltb-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--green-dark);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: .95rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  transition: background .15s;
+}
+.knltb-link-btn:hover { background: var(--green-mid); }
+
+.knltb-hint {
+  font-size: .82rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px 0 12px;
+}
+
+.standings-wrap {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.standings-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+}
+
+.standings-tbl thead th {
+  background: var(--green-dark);
+  color: white;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 700;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.standings-tbl th.col-team { text-align: left; padding-left: 12px; }
+.standings-tbl td.col-team { text-align: left; padding-left: 12px; font-weight: 600; }
+
+.standings-tbl td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.standings-tbl tbody tr:last-child td { border-bottom: none; }
+.standings-tbl tbody tr:hover { background: var(--green-pale); }
+
+.col-pos { color: var(--text-muted); font-weight: 700; width: 28px; }
+.col-pts strong { color: var(--green-dark); }
+.col-actions { white-space: nowrap; width: 72px; }
+
+.standings-hint {
+  font-size: .75rem;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+}

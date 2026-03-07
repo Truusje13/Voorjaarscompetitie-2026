@@ -31,7 +31,9 @@ const DEMO_STATE = {
   teamName:  'Voorjaarscompetitie 2026',
   teamPhoto: null,
   players:   [],
-  matches:   []
+  matches:   [],
+  standings: [],
+  knltbUrl:  ''
 }
 
 let state = {}
@@ -49,6 +51,8 @@ async function loadState() {
     const snap = await getDoc(STATE)
     if (snap.exists()) {
       state = snap.data()
+      state.standings = state.standings || []
+      if (state.knltbUrl === undefined) state.knltbUrl = ''
     } else {
       state = JSON.parse(JSON.stringify(DEMO_STATE))
       saveState()
@@ -68,10 +72,14 @@ function setupSync() {
   onSnapshot(STATE, snap => {
     if (!snap.exists()) return
     state = snap.data()
+    state.standings = state.standings || []
+    if (state.knltbUrl === undefined) state.knltbUrl = ''
     renderHeader()
     renderTeamPhoto()
     renderMatchList()
     renderPlayerList()
+    renderStandings()
+    renderKnltbLink()
     // Match detail NIET opnieuw renderen om invulvelden niet te verstoren
   })
 }
@@ -254,6 +262,71 @@ function renderPlayerList() {
         <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
       </div>
     </div>`).join('')
+}
+
+// ============================================================
+// RENDERING — STANDINGS
+// ============================================================
+
+function renderKnltbLink() {
+  const el = document.getElementById('standings-knltb-btn')
+  if (!el) return
+  if (state.knltbUrl) {
+    el.innerHTML = `<a href="${escAttr(state.knltbUrl)}" target="_blank" rel="noopener" class="knltb-link-btn">🔗 Bekijk stand op KNLTB</a>`
+  } else {
+    el.innerHTML = `<p class="knltb-hint">Voeg de KNLTB-link toe via ⚙️ Instellingen zodra de competitie is begonnen.</p>`
+  }
+}
+
+function renderStandings() {
+  const container = document.getElementById('standings-table')
+  if (!container) return
+  const standings = state.standings || []
+
+  if (standings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Nog geen ploegen toegevoegd.</p>
+        <p>Klik op "+ Ploeg" om de stand in te vullen.</p>
+      </div>`
+    return
+  }
+
+  const sorted = [...standings].sort((a, b) => (b.points - a.points) || (b.won - a.won))
+  container.innerHTML = `
+    <div class="standings-wrap">
+      <table class="standings-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="col-team">Ploeg</th>
+            <th title="Gespeeld">Ges</th>
+            <th title="Gewonnen">W</th>
+            <th title="Gelijk">G</th>
+            <th title="Verloren">V</th>
+            <th title="Punten">Ptn</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map((s, i) => `
+            <tr>
+              <td class="col-pos">${i + 1}</td>
+              <td class="col-team">${escHtml(s.team)}</td>
+              <td>${(s.won || 0) + (s.draw || 0) + (s.lost || 0)}</td>
+              <td>${s.won || 0}</td>
+              <td>${s.draw || 0}</td>
+              <td>${s.lost || 0}</td>
+              <td class="col-pts"><strong>${s.points || 0}</strong></td>
+              <td class="col-actions">
+                <button class="btn-icon-edit" data-action="edit-standing" data-id="${s.id}" title="Bewerken">✏️</button>
+                <button class="btn-icon-danger" data-action="delete-standing" data-id="${s.id}" title="Verwijderen">🗑️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <p class="standings-hint">Ptn = W×2 + G×1, of handmatig invullen</p>
+    </div>`
 }
 
 // ============================================================
@@ -454,6 +527,7 @@ function savePlayerForm(e) {
 
 function openSettings() {
   document.getElementById('input-teamname').value = state.teamName
+  document.getElementById('input-knltb-url').value = state.knltbUrl || ''
   // Show current team photo preview
   const preview = document.getElementById('team-photo-settings-preview')
   preview.innerHTML = state.teamPhoto
@@ -465,6 +539,7 @@ function openSettings() {
 async function saveSettings() {
   const name = document.getElementById('input-teamname').value.trim()
   if (name) state.teamName = name
+  state.knltbUrl = document.getElementById('input-knltb-url').value.trim()
 
   const photoInput = document.getElementById('input-team-photo')
   if (photoInput.files[0]) {
@@ -616,6 +691,60 @@ function deletePlayer(playerId) {
 }
 
 // ============================================================
+// STANDINGS ACTIONS
+// ============================================================
+
+function openStandingForm(standingId) {
+  const form = document.getElementById('form-standing')
+  form.reset()
+  if (standingId) {
+    const s = (state.standings || []).find(x => x.id === standingId)
+    if (!s) return
+    document.getElementById('modal-standing-title').textContent = 'Ploeg bewerken'
+    form.elements.standingId.value = s.id
+    form.elements.team.value       = s.team
+    form.elements.won.value        = s.won    || 0
+    form.elements.draw.value       = s.draw   || 0
+    form.elements.lost.value       = s.lost   || 0
+    form.elements.points.value     = s.points || 0
+  } else {
+    document.getElementById('modal-standing-title').textContent = 'Ploeg toevoegen'
+    form.elements.standingId.value = ''
+  }
+  document.getElementById('modal-standing').classList.remove('hidden')
+}
+
+function saveStandingForm(e) {
+  e.preventDefault()
+  const form = e.target
+  const data = {
+    team:   form.elements.team.value.trim(),
+    won:    parseInt(form.elements.won.value)    || 0,
+    draw:   parseInt(form.elements.draw.value)   || 0,
+    lost:   parseInt(form.elements.lost.value)   || 0,
+    points: parseInt(form.elements.points.value) || 0,
+  }
+  if (!state.standings) state.standings = []
+  const standingId = form.elements.standingId.value
+  if (standingId) {
+    const s = state.standings.find(x => x.id === standingId)
+    if (s) Object.assign(s, data)
+  } else {
+    state.standings.push({ id: generateId(), ...data })
+  }
+  saveState()
+  closeModal('modal-standing')
+  renderStandings()
+}
+
+function deleteStanding(standingId) {
+  if (!confirm('Weet je zeker dat je deze ploeg wilt verwijderen?')) return
+  state.standings = (state.standings || []).filter(s => s.id !== standingId)
+  saveState()
+  renderStandings()
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
@@ -671,8 +800,11 @@ document.addEventListener('click', e => {
     case 'save-result':
       if (selectedMatchId) saveResult(selectedMatchId)
       break
-    case 'open-settings': openSettings(); break
-    case 'save-settings': saveSettings(); break
+    case 'open-settings':   openSettings(); break
+    case 'save-settings':   saveSettings(); break
+    case 'add-standing':    openStandingForm(null); break
+    case 'edit-standing':   openStandingForm(btn.dataset.id); break
+    case 'delete-standing': deleteStanding(btn.dataset.id); break
   }
 })
 
@@ -696,6 +828,7 @@ document.querySelectorAll('.modal').forEach(modal => {
 document.getElementById('form-match').addEventListener('submit', saveMatchForm)
 document.getElementById('form-player').addEventListener('submit', savePlayerForm)
 document.getElementById('form-edit-player').addEventListener('submit', saveEditPlayerForm)
+document.getElementById('form-standing').addEventListener('submit', saveStandingForm)
 
 // ============================================================
 // INIT
@@ -710,6 +843,8 @@ async function init() {
   renderHeader()
   renderMatchList()
   renderPlayerList()
+  renderStandings()
+  renderKnltbLink()
 }
 
 init()

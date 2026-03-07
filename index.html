@@ -16,6 +16,7 @@
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="matches">Wedstrijden</button>
         <button class="tab-btn" data-tab="players">Speelsters</button>
+        <button class="tab-btn" data-tab="standings">Stand</button>
       </nav>
     </header>
 
@@ -37,6 +38,16 @@
           <button class="btn-primary" data-action="add-player">+ Toevoegen</button>
         </div>
         <div id="players-list"></div>
+      </div>
+
+      <!-- Stand tab -->
+      <div id="tab-standings" class="tab-content">
+        <div id="standings-knltb-btn"></div>
+        <div class="content-header">
+          <h2>Competitiestand</h2>
+          <button class="btn-primary" data-action="add-standing">+ Ploeg</button>
+        </div>
+        <div id="standings-table"></div>
       </div>
     </main>
   </div>
@@ -164,6 +175,10 @@
           <input type="text" id="input-teamname" placeholder="Naam van je team">
         </div>
         <div class="form-group">
+          <label>KNLTB competitie-link</label>
+          <input type="text" id="input-knltb-url" placeholder="https://mijnknltb.toernooi.nl/...">
+        </div>
+        <div class="form-group">
           <label>Teamfoto</label>
           <label class="photo-upload-area">
             <div id="team-photo-settings-preview"></div>
@@ -176,6 +191,47 @@
           <button type="button" class="btn-primary" data-action="save-settings">Opslaan</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Stand invoeren -->
+  <div id="modal-standing" class="modal hidden">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3 id="modal-standing-title">Ploeg toevoegen</h3>
+        <button class="icon-btn modal-close" data-modal="modal-standing">✕</button>
+      </div>
+      <form id="form-standing" class="modal-body">
+        <input type="hidden" name="standingId">
+        <div class="form-group">
+          <label>Ploegnaam *</label>
+          <input type="text" name="team" placeholder="Naam van de ploeg" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Gewonnen</label>
+            <input type="number" name="won" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Gelijk</label>
+            <input type="number" name="draw" min="0" value="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Verloren</label>
+            <input type="number" name="lost" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Punten</label>
+            <input type="number" name="points" min="0" value="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close" data-modal="modal-standing">Annuleren</button>
+          <button type="submit" class="btn-primary">Opslaan</button>
+        </div>
+      </form>
     </div>
   </div>
 
