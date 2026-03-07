@@ -1,0 +1,576 @@
+/* ============================================================
+   TENNIS TEAM APP — met Firebase Firestore sync
+   ============================================================ */
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js'
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js'
+
+// ============================================================
+// FIREBASE
+// ============================================================
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyBuSfjF4O00A5ycijDDhbXFXP5L3SWJCtY',
+  authDomain:        'voorjaarscompetitie-2026.firebaseapp.com',
+  projectId:         'voorjaarscompetitie-2026',
+  storageBucket:     'voorjaarscompetitie-2026.firebasestorage.app',
+  messagingSenderId: '855290831568',
+  appId:             '1:855290831568:web:689914acb456fccc1d74d5'
+}
+
+const fbApp  = initializeApp(firebaseConfig)
+const db     = getFirestore(fbApp)
+const STATE  = doc(db, 'tennis', 'state')
+
+// ============================================================
+// STATE
+// ============================================================
+
+const DEMO_STATE = {
+  teamName: 'Voorjaarscompetitie 2026',
+  players:  [],
+  matches:  []
+}
+
+let state = {}
+
+// Current UI state
+let activeTab       = 'matches'
+let selectedMatchId = null
+
+// ============================================================
+// PERSISTENCE — Firebase
+// ============================================================
+
+async function loadState() {
+  try {
+    const snap = await getDoc(STATE)
+    if (snap.exists()) {
+      state = snap.data()
+    } else {
+      state = JSON.parse(JSON.stringify(DEMO_STATE))
+      saveState()
+    }
+  } catch (e) {
+    console.error('Firebase laden mislukt:', e)
+    state = JSON.parse(JSON.stringify(DEMO_STATE))
+  }
+}
+
+function saveState() {
+  setDoc(STATE, state).catch(e => console.error('Firebase opslaan mislukt:', e))
+}
+
+// Real-time sync: als een teamgenoot iets wijzigt, update jij ook meteen
+function setupSync() {
+  onSnapshot(STATE, snap => {
+    if (!snap.exists()) return
+    state = snap.data()
+    renderHeader()
+    renderMatchList()
+    renderPlayerList()
+    // Match detail NIET opnieuw renderen om invulvelden niet te verstoren
+  })
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+}
+
+const MONTHS   = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']
+const WEEKDAYS = ['zo','ma','di','wo','do','vr','za']
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+}
+
+function getPlayer(id)    { return state.players.find(p => p.id === id) }
+function playerName(id)   { return getPlayer(id)?.name ?? '?' }
+
+function parseScore(str) {
+  if (!str) return null
+  const m = str.trim().match(/^(\d+)-(\d+)$/)
+  if (!m) return null
+  return { ours: parseInt(m[1]), theirs: parseInt(m[2]) }
+}
+
+function resultBadgeHtml(match) {
+  if (!match.result?.score) return ''
+  const s = parseScore(match.result.score)
+  if (!s) return `<span class="badge">${match.result.score}</span>`
+  if (s.ours > s.theirs) return `<span class="badge badge-win">Gewonnen ${match.result.score}</span>`
+  if (s.ours < s.theirs) return `<span class="badge badge-loss">Verloren ${match.result.score}</span>`
+  return `<span class="badge badge-draw">Gelijk ${match.result.score}</span>`
+}
+
+// ============================================================
+// RENDERING — MATCH LIST
+// ============================================================
+
+function renderMatchList() {
+  const container = document.getElementById('matches-list')
+
+  if (!state.matches || state.matches.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Nog geen wedstrijden gepland.</p>
+        <p>Klik op "+ Toevoegen" om te beginnen.</p>
+      </div>`
+    return
+  }
+
+  const today    = new Date().toISOString().slice(0, 10)
+  const sorted   = [...state.matches].sort((a, b) => a.date.localeCompare(b.date))
+  const upcoming = sorted.filter(m => m.date >= today)
+  const past     = sorted.filter(m => m.date <  today).reverse()
+
+  let html = ''
+  if (upcoming.length) {
+    html += '<h3 class="section-label">Aankomend</h3>'
+    html += upcoming.map(m => matchCardHtml(m, false)).join('')
+  }
+  if (past.length) {
+    html += '<h3 class="section-label">Gespeeld</h3>'
+    html += past.map(m => matchCardHtml(m, true)).join('')
+  }
+
+  container.innerHTML = html
+}
+
+function matchCardHtml(match, isPast) {
+  const playing = (state.players || []).filter(p => match.lineup?.[p.id] === 'plays')
+  const reserve  = (state.players || []).filter(p => match.lineup?.[p.id] === 'reserve')
+  const drivers  = (match.drivers  || []).map(playerName)
+  const cake     = (match.cakeDuty || []).map(playerName)
+
+  const playingStr = playing.length
+    ? playing.map(p => p.name).join(', ')
+    : '<em>Nog geen opstelling</em>'
+  const reserveStr = reserve.length ? `Reserve: ${reserve.map(p => p.name).join(', ')}` : ''
+  const driverStr  = drivers.length ? `🚗 ${drivers.join(', ')}` : ''
+  const cakeStr    = cake.length    ? `🍰 ${cake.join(', ')}`    : ''
+
+  return `
+    <div class="match-card ${match.isHome ? 'home' : 'away'} ${isPast ? 'past' : ''}"
+         data-action="open-match" data-id="${match.id}">
+      <div class="match-card-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge ${match.isHome ? 'badge-home' : 'badge-away'}">${match.isHome ? 'Thuis' : 'Uit'}</span>
+          <span class="match-opponent">${escHtml(match.opponent)}</span>
+        </div>
+        ${resultBadgeHtml(match)}
+      </div>
+      <div class="match-datetime">${formatDate(match.date)}${match.time ? ' om ' + match.time : ''}</div>
+      ${match.location ? `<div class="match-location">📍 ${escHtml(match.location)}</div>` : ''}
+      <div class="match-players">${playingStr}</div>
+      ${reserveStr ? `<div class="match-reserve">${reserveStr}</div>` : ''}
+      ${(driverStr || cakeStr) ? `
+        <div class="match-meta">
+          ${driverStr ? `<span class="match-meta-item">${driverStr}</span>` : ''}
+          ${cakeStr   ? `<span class="match-meta-item">${cakeStr}</span>`   : ''}
+        </div>` : ''}
+    </div>`
+}
+
+// ============================================================
+// RENDERING — PLAYER LIST
+// ============================================================
+
+function renderPlayerList() {
+  const container = document.getElementById('players-list')
+
+  if (!state.players || state.players.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Nog geen speelsters toegevoegd.</p>
+        <p>Klik op "+ Toevoegen" om te beginnen.</p>
+      </div>`
+    return
+  }
+
+  container.innerHTML = state.players.map(p => `
+    <div class="player-card">
+      <span class="player-card-name">${escHtml(p.name)}</span>
+      <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
+    </div>`).join('')
+}
+
+// ============================================================
+// RENDERING — MATCH DETAIL OVERLAY
+// ============================================================
+
+function openMatchDetail(matchId) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+
+  selectedMatchId = matchId
+
+  document.getElementById('overlay-title').textContent =
+    `${match.isHome ? 'Thuis' : 'Uit'}: ${match.opponent}`
+
+  const noPlayers = !state.players || state.players.length === 0
+
+  const lineupSection = noPlayers
+    ? `<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>`
+    : `
+      <div class="detail-section">
+        <h4>👥 Opstelling</h4>
+        <div class="lineup-list">
+          ${state.players.map(p => {
+            const s = match.lineup?.[p.id] ?? null
+            return `
+              <div class="lineup-row">
+                <span class="lineup-name">${escHtml(p.name)}</span>
+                <div class="lineup-btns">
+                  <button class="lineup-btn ${s === 'plays'   ? 'active-plays'   : ''}"
+                    data-action="set-lineup" data-player="${p.id}" data-status="plays">Speelt</button>
+                  <button class="lineup-btn ${s === 'reserve' ? 'active-reserve' : ''}"
+                    data-action="set-lineup" data-player="${p.id}" data-status="reserve">Reserve</button>
+                </div>
+              </div>`
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>🚗 Vervoer — wie rijdt?</h4>
+        <div class="check-grid">
+          ${state.players.map(p => `
+            <label class="check-item">
+              <input type="checkbox" data-action="toggle-driver" data-player="${p.id}"
+                ${(match.drivers || []).includes(p.id) ? 'checked' : ''}>
+              <span>${escHtml(p.name)}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      ${match.isHome ? `
+      <div class="detail-section">
+        <h4>🍰 Gebak — wie neemt het mee?</h4>
+        <div class="check-grid">
+          ${state.players.map(p => `
+            <label class="check-item">
+              <input type="checkbox" data-action="toggle-cake" data-player="${p.id}"
+                ${(match.cakeDuty || []).includes(p.id) ? 'checked' : ''}>
+              <span>${escHtml(p.name)}</span>
+            </label>`).join('')}
+        </div>
+      </div>` : ''}`
+
+  document.getElementById('overlay-content').innerHTML = `
+    <div class="detail-info">
+      <div class="detail-row">
+        <span class="detail-label">Datum</span>
+        <span>${formatDate(match.date)}</span>
+      </div>
+      ${match.time ? `<div class="detail-row"><span class="detail-label">Tijd</span><span>${match.time}</span></div>` : ''}
+      ${match.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><span>📍 ${escHtml(match.location)}</span></div>` : ''}
+      ${match.notes ? `<div class="detail-row"><span class="detail-label">Notities</span><span>${escHtml(match.notes)}</span></div>` : ''}
+    </div>
+
+    ${lineupSection}
+
+    <div class="detail-section">
+      <h4>🎾 Uitslag</h4>
+      <div class="result-form">
+        <div class="result-inputs">
+          <input type="text" id="input-score" class="input-score"
+            placeholder="bv. 3-1" maxlength="10"
+            value="${escAttr(match.result?.score ?? '')}">
+          <input type="text" id="input-sets" class="input-sets"
+            placeholder="bv. 6-3 4-6 7-5"
+            value="${escAttr(match.result?.sets ?? '')}">
+        </div>
+        <div class="input-labels">
+          <span>Rubberscore</span>
+          <span>Setstanden (optioneel)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn-primary" data-action="save-result">Uitslag opslaan</button>
+          ${resultBadgeHtml(match)}
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="btn-secondary" data-action="edit-match">✏️ Bewerken</button>
+      <button class="btn-danger"    data-action="delete-match">🗑️ Verwijderen</button>
+    </div>`
+
+  document.getElementById('overlay-match').classList.remove('hidden')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeOverlay() {
+  document.getElementById('overlay-match').classList.add('hidden')
+  document.body.style.overflow = ''
+  selectedMatchId = null
+}
+
+// ============================================================
+// MATCH FORM
+// ============================================================
+
+function openMatchForm(matchId) {
+  const form  = document.getElementById('form-match')
+  const modal = document.getElementById('modal-match')
+
+  form.reset()
+
+  if (matchId) {
+    const match = state.matches.find(m => m.id === matchId)
+    if (!match) return
+    document.getElementById('modal-match-title').textContent = 'Wedstrijd bewerken'
+    form.elements.matchId.value  = match.id
+    form.elements.date.value     = match.date
+    form.elements.time.value     = match.time
+    form.elements.opponent.value = match.opponent
+    form.elements.location.value = match.location
+    form.elements.notes.value    = match.notes
+    form.querySelector(`[name="isHome"][value="${match.isHome}"]`).checked = true
+  } else {
+    document.getElementById('modal-match-title').textContent = 'Wedstrijd toevoegen'
+    form.elements.matchId.value = ''
+  }
+
+  modal.classList.remove('hidden')
+}
+
+function saveMatchForm(e) {
+  e.preventDefault()
+  const form = e.target
+  const data = {
+    date:     form.elements.date.value,
+    time:     form.elements.time.value,
+    isHome:   form.elements.isHome.value === 'true',
+    opponent: form.elements.opponent.value.trim(),
+    location: form.elements.location.value.trim(),
+    notes:    form.elements.notes.value.trim(),
+  }
+
+  const matchId = form.elements.matchId.value
+
+  if (matchId) {
+    const match = state.matches.find(m => m.id === matchId)
+    if (match) Object.assign(match, data)
+  } else {
+    state.matches.push({ id: generateId(), lineup: {}, drivers: [], cakeDuty: [], result: null, ...data })
+  }
+
+  saveState()
+  closeModal('modal-match')
+  renderMatchList()
+
+  if (matchId && matchId === selectedMatchId) openMatchDetail(matchId)
+}
+
+// ============================================================
+// PLAYER FORM
+// ============================================================
+
+function openPlayerForm() {
+  document.getElementById('form-player').reset()
+  document.getElementById('modal-player').classList.remove('hidden')
+  document.querySelector('#modal-player [name="name"]').focus()
+}
+
+function savePlayerForm(e) {
+  e.preventDefault()
+  const name = e.target.elements.name.value.trim()
+  if (!name) return
+  state.players.push({ id: generateId(), name })
+  saveState()
+  closeModal('modal-player')
+  renderPlayerList()
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+
+function openSettings() {
+  document.getElementById('input-teamname').value = state.teamName
+  document.getElementById('modal-settings').classList.remove('hidden')
+}
+
+function saveSettings() {
+  const name = document.getElementById('input-teamname').value.trim()
+  if (name) {
+    state.teamName = name
+    document.getElementById('team-name-display').textContent = name
+  }
+  saveState()
+  closeModal('modal-settings')
+}
+
+// ============================================================
+// MATCH DETAIL ACTIONS
+// ============================================================
+
+function setLineup(matchId, playerId, status) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  if (!match.lineup) match.lineup = {}
+  match.lineup[playerId] === status ? delete match.lineup[playerId] : (match.lineup[playerId] = status)
+  saveState()
+  renderMatchList()
+  openMatchDetail(matchId)
+}
+
+function toggleDriver(matchId, playerId, checked) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  if (!match.drivers) match.drivers = []
+  match.drivers = checked
+    ? [...new Set([...match.drivers, playerId])]
+    : match.drivers.filter(id => id !== playerId)
+  saveState()
+  renderMatchList()
+}
+
+function toggleCake(matchId, playerId, checked) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  if (!match.cakeDuty) match.cakeDuty = []
+  match.cakeDuty = checked
+    ? [...new Set([...match.cakeDuty, playerId])]
+    : match.cakeDuty.filter(id => id !== playerId)
+  saveState()
+  renderMatchList()
+}
+
+function saveResult(matchId) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  const score = document.getElementById('input-score').value.trim()
+  const sets  = document.getElementById('input-sets').value.trim()
+  match.result = score ? { score, sets } : null
+  saveState()
+  renderMatchList()
+  openMatchDetail(matchId)
+}
+
+function deleteMatch(matchId) {
+  if (!confirm('Weet je zeker dat je deze wedstrijd wilt verwijderen?')) return
+  state.matches = state.matches.filter(m => m.id !== matchId)
+  saveState()
+  closeOverlay()
+  renderMatchList()
+}
+
+function deletePlayer(playerId) {
+  const p = getPlayer(playerId)
+  if (!p) return
+  if (!confirm(`Weet je zeker dat je "${p.name}" wilt verwijderen?`)) return
+  state.players = state.players.filter(pl => pl.id !== playerId)
+  state.matches.forEach(m => {
+    if (m.lineup) delete m.lineup[playerId]
+    m.drivers  = (m.drivers  || []).filter(id => id !== playerId)
+    m.cakeDuty = (m.cakeDuty || []).filter(id => id !== playerId)
+  })
+  saveState()
+  renderPlayerList()
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.add('hidden')
+}
+
+function renderHeader() {
+  document.getElementById('team-name-display').textContent = state.teamName
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+function escAttr(str) { return escHtml(str) }
+
+// ============================================================
+// EVENT DELEGATION
+// ============================================================
+
+document.addEventListener('click', e => {
+  const tabBtn = e.target.closest('.tab-btn')
+  if (tabBtn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    tabBtn.classList.add('active')
+    document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active')
+    activeTab = tabBtn.dataset.tab
+    return
+  }
+
+  const closeBtn = e.target.closest('.modal-close')
+  if (closeBtn) { closeModal(closeBtn.dataset.modal); return }
+
+  const btn = e.target.closest('[data-action]')
+  if (!btn) return
+
+  switch (btn.dataset.action) {
+    case 'open-match':    openMatchDetail(btn.dataset.id); break
+    case 'close-overlay': closeOverlay(); break
+    case 'add-match':     openMatchForm(null); break
+    case 'edit-match':    openMatchForm(selectedMatchId); break
+    case 'delete-match':  deleteMatch(selectedMatchId); break
+    case 'add-player':    openPlayerForm(); break
+    case 'delete-player': deletePlayer(btn.dataset.id); break
+    case 'set-lineup':
+      if (selectedMatchId) setLineup(selectedMatchId, btn.dataset.player, btn.dataset.status)
+      break
+    case 'save-result':
+      if (selectedMatchId) saveResult(selectedMatchId)
+      break
+    case 'open-settings': openSettings(); break
+    case 'save-settings': saveSettings(); break
+  }
+})
+
+document.addEventListener('change', e => {
+  const input = e.target
+  if (!selectedMatchId) return
+  if (input.dataset.action === 'toggle-driver') toggleDriver(selectedMatchId, input.dataset.player, input.checked)
+  if (input.dataset.action === 'toggle-cake')   toggleCake(selectedMatchId, input.dataset.player, input.checked)
+})
+
+document.getElementById('overlay-match').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeOverlay()
+})
+
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', e => {
+    if (e.target === e.currentTarget) modal.classList.add('hidden')
+  })
+})
+
+document.getElementById('form-match').addEventListener('submit', saveMatchForm)
+document.getElementById('form-player').addEventListener('submit', savePlayerForm)
+
+// ============================================================
+// INIT
+// ============================================================
+
+async function init() {
+  document.getElementById('matches-list').innerHTML =
+    '<div class="empty-state"><p>Verbinden met Firebase...</p></div>'
+
+  await loadState()
+  setupSync()
+  renderHeader()
+  renderMatchList()
+  renderPlayerList()
+}
+
+init()
