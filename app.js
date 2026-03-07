@@ -860,3 +860,11 @@ async function init() {
 }
 
 init()
+
+// Service worker registreren (maakt app installeerbaar)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.log('SW registratie mislukt:', err))
+  })
+}
