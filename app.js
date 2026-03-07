@@ -28,9 +28,10 @@ const STATE  = doc(db, 'tennis', 'state')
 // ============================================================
 
 const DEMO_STATE = {
-  teamName: 'Voorjaarscompetitie 2026',
-  players:  [],
-  matches:  []
+  teamName:  'Voorjaarscompetitie 2026',
+  teamPhoto: null,
+  players:   [],
+  matches:   []
 }
 
 let state = {}
@@ -68,6 +69,7 @@ function setupSync() {
     if (!snap.exists()) return
     state = snap.data()
     renderHeader()
+    renderTeamPhoto()
     renderMatchList()
     renderPlayerList()
     // Match detail NIET opnieuw renderen om invulvelden niet te verstoren
@@ -94,6 +96,39 @@ function formatDate(dateStr) {
 function getPlayer(id)    { return state.players.find(p => p.id === id) }
 function playerName(id)   { return getPlayer(id)?.name ?? '?' }
 
+function getInitials(name) {
+  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function avatarHtml(player, small = false) {
+  const cls = small ? 'avatar-sm' : ''
+  if (player?.photo) {
+    return `<img class="avatar ${cls}" src="${player.photo}" alt="${escHtml(player.name)}">`
+  }
+  return `<span class="avatar-initials ${cls}">${escHtml(getInitials(player?.name ?? '?'))}</span>`
+}
+
+// Compress an image file to a base64 JPEG string
+function compressImage(file, maxW, maxH, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        let w = img.width, h = img.height
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 function parseScore(str) {
   if (!str) return null
   const m = str.trim().match(/^(\d+)-(\d+)$/)
@@ -113,6 +148,19 @@ function resultBadgeHtml(match) {
 // ============================================================
 // RENDERING — MATCH LIST
 // ============================================================
+
+function renderTeamPhoto() {
+  const area = document.getElementById('team-photo-area')
+  if (!area) return
+  if (state.teamPhoto) {
+    area.innerHTML = `<img src="${state.teamPhoto}" class="team-photo-banner"
+      data-action="open-settings" title="Klik om foto te wijzigen" alt="Teamfoto">`
+  } else {
+    area.innerHTML = `<div class="team-photo-placeholder" data-action="open-settings">
+      📷 Teamfoto toevoegen (via ⚙️ Instellingen)
+    </div>`
+  }
+}
 
 function renderMatchList() {
   const container = document.getElementById('matches-list')
@@ -197,8 +245,14 @@ function renderPlayerList() {
 
   container.innerHTML = state.players.map(p => `
     <div class="player-card">
-      <span class="player-card-name">${escHtml(p.name)}</span>
-      <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
+      ${avatarHtml(p)}
+      <div class="player-card-info">
+        <span class="player-card-name">${escHtml(p.name)}</span>
+      </div>
+      <div class="player-card-actions">
+        <button class="btn-icon-edit" data-action="edit-player" data-id="${p.id}" title="Bewerken">✏️</button>
+        <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
+      </div>
     </div>`).join('')
 }
 
@@ -227,6 +281,7 @@ function openMatchDetail(matchId) {
             const s = match.lineup?.[p.id] ?? null
             return `
               <div class="lineup-row">
+                ${avatarHtml(p, true)}
                 <span class="lineup-name">${escHtml(p.name)}</span>
                 <div class="lineup-btns">
                   <button class="lineup-btn ${s === 'plays'   ? 'active-plays'   : ''}"
@@ -243,9 +298,10 @@ function openMatchDetail(matchId) {
         <h4>🚗 Vervoer — wie rijdt?</h4>
         <div class="check-grid">
           ${state.players.map(p => `
-            <label class="check-item">
+            <label class="check-item-avatar">
               <input type="checkbox" data-action="toggle-driver" data-player="${p.id}"
                 ${(match.drivers || []).includes(p.id) ? 'checked' : ''}>
+              ${avatarHtml(p, true)}
               <span>${escHtml(p.name)}</span>
             </label>`).join('')}
         </div>
@@ -256,9 +312,10 @@ function openMatchDetail(matchId) {
         <h4>🍰 Gebak — wie neemt het mee?</h4>
         <div class="check-grid">
           ${state.players.map(p => `
-            <label class="check-item">
+            <label class="check-item-avatar">
               <input type="checkbox" data-action="toggle-cake" data-player="${p.id}"
                 ${(match.cakeDuty || []).includes(p.id) ? 'checked' : ''}>
+              ${avatarHtml(p, true)}
               <span>${escHtml(p.name)}</span>
             </label>`).join('')}
         </div>
@@ -397,18 +454,97 @@ function savePlayerForm(e) {
 
 function openSettings() {
   document.getElementById('input-teamname').value = state.teamName
+  // Show current team photo preview
+  const preview = document.getElementById('team-photo-settings-preview')
+  preview.innerHTML = state.teamPhoto
+    ? `<img src="${state.teamPhoto}" class="photo-preview" style="width:80px;height:80px">`
+    : `<span class="photo-preview-initials" style="width:56px;height:56px">📷</span>`
   document.getElementById('modal-settings').classList.remove('hidden')
 }
 
-function saveSettings() {
+async function saveSettings() {
   const name = document.getElementById('input-teamname').value.trim()
-  if (name) {
-    state.teamName = name
-    document.getElementById('team-name-display').textContent = name
+  if (name) state.teamName = name
+
+  const photoInput = document.getElementById('input-team-photo')
+  if (photoInput.files[0]) {
+    state.teamPhoto = await compressImage(photoInput.files[0], 800, 400, 0.8)
+    photoInput.value = ''
   }
+
   saveState()
+  renderHeader()
+  renderTeamPhoto()
   closeModal('modal-settings')
 }
+
+// ============================================================
+// EDIT PLAYER
+// ============================================================
+
+function openEditPlayerModal(playerId) {
+  const player = getPlayer(playerId)
+  if (!player) return
+
+  const form = document.getElementById('form-edit-player')
+  form.elements.playerId.value = playerId
+  form.elements.name.value     = player.name
+
+  // Show current photo or initials
+  const preview = document.getElementById('edit-player-photo-preview')
+  if (player.photo) {
+    preview.outerHTML = `<img id="edit-player-photo-preview" class="photo-preview" src="${player.photo}" alt="${escHtml(player.name)}">`
+  } else {
+    preview.textContent = getInitials(player.name)
+    preview.className = 'photo-preview-initials'
+  }
+
+  document.getElementById('modal-edit-player').classList.remove('hidden')
+}
+
+async function saveEditPlayerForm(e) {
+  e.preventDefault()
+  const form     = e.target
+  const playerId = form.elements.playerId.value
+  const player   = getPlayer(playerId)
+  if (!player) return
+
+  player.name = form.elements.name.value.trim() || player.name
+
+  const photoFile = form.elements.photo.files[0]
+  if (photoFile) {
+    player.photo = await compressImage(photoFile, 200, 200, 0.75)
+  }
+
+  saveState()
+  closeModal('modal-edit-player')
+  renderPlayerList()
+
+  // Re-render match detail if open (to update avatars)
+  if (selectedMatchId) openMatchDetail(selectedMatchId)
+}
+
+// Live photo preview in edit-player modal
+document.getElementById('edit-player-photo-input').addEventListener('change', async e => {
+  const file = e.target.files[0]
+  if (!file) return
+  const data = await compressImage(file, 200, 200, 0.75)
+  const container = document.querySelector('#edit-player-photo-preview, .photo-preview-initials')
+  const img = document.createElement('img')
+  img.id = 'edit-player-photo-preview'
+  img.className = 'photo-preview'
+  img.src = data
+  container.replaceWith(img)
+})
+
+// Live team photo preview in settings
+document.getElementById('input-team-photo').addEventListener('change', async e => {
+  const file = e.target.files[0]
+  if (!file) return
+  const data = await compressImage(file, 800, 400, 0.8)
+  const preview = document.getElementById('team-photo-settings-preview')
+  preview.innerHTML = `<img src="${data}" class="photo-preview" style="width:80px;height:80px">`
+})
 
 // ============================================================
 // MATCH DETAIL ACTIONS
@@ -489,6 +625,7 @@ function closeModal(modalId) {
 
 function renderHeader() {
   document.getElementById('team-name-display').textContent = state.teamName
+  renderTeamPhoto()
 }
 
 function escHtml(str) {
@@ -526,6 +663,7 @@ document.addEventListener('click', e => {
     case 'edit-match':    openMatchForm(selectedMatchId); break
     case 'delete-match':  deleteMatch(selectedMatchId); break
     case 'add-player':    openPlayerForm(); break
+    case 'edit-player':   openEditPlayerModal(btn.dataset.id); break
     case 'delete-player': deletePlayer(btn.dataset.id); break
     case 'set-lineup':
       if (selectedMatchId) setLineup(selectedMatchId, btn.dataset.player, btn.dataset.status)
@@ -557,6 +695,7 @@ document.querySelectorAll('.modal').forEach(modal => {
 
 document.getElementById('form-match').addEventListener('submit', saveMatchForm)
 document.getElementById('form-player').addEventListener('submit', savePlayerForm)
+document.getElementById('form-edit-player').addEventListener('submit', saveEditPlayerForm)
 
 // ============================================================
 // INIT

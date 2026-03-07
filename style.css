@@ -625,3 +625,181 @@ main {
   .detail-actions .btn-secondary,
   .detail-actions .btn-danger { width: 100%; }
 }
+
+/* ============================================================
+   TEAM PHOTO BANNER
+   ============================================================ */
+.team-photo-banner {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.team-photo-placeholder {
+  width: 100%;
+  height: 80px;
+  background: var(--green-bg);
+  border: 2px dashed var(--green-light);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-mid);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: background .15s;
+}
+.team-photo-placeholder:hover { background: #c7edcc; }
+
+/* ============================================================
+   AVATARS
+   ============================================================ */
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.avatar-initials {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--green-bg);
+  color: var(--green-dark);
+  font-size: .8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--green-light);
+}
+
+.avatar-sm { width: 30px; height: 30px; font-size: .7rem; }
+
+/* ============================================================
+   PLAYER CARD — with avatar
+   ============================================================ */
+.player-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-card-info { flex: 1; min-width: 0; }
+.player-card-name { font-weight: 600; font-size: .95rem; }
+
+.player-card-actions { display: flex; gap: 6px; }
+
+.btn-icon-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background .15s;
+  color: var(--text-muted);
+}
+.btn-icon-edit:hover { background: var(--green-bg); }
+
+/* ============================================================
+   PHOTO UPLOAD FIELD
+   ============================================================ */
+.photo-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.photo-upload-area:hover { border-color: var(--green-mid); background: var(--green-pale); }
+
+.photo-upload-area input[type="file"] {
+  display: none;
+}
+
+.photo-upload-label {
+  font-size: .85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.photo-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.photo-preview-initials {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  color: var(--green-dark);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  border: 2px solid var(--green-light);
+  flex-shrink: 0;
+}
+
+/* Team photo in settings */
+.team-photo-preview {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+  display: block;
+}
+
+/* Lineup row with avatar */
+.lineup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lineup-row .lineup-name { flex: 1; }
+
+/* Check-item with avatar */
+.check-item-avatar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 500;
+  transition: border-color .15s, background .15s;
+}
+.check-item-avatar:has(input:checked) {
+  background: var(--green-bg);
+  border-color: var(--green-mid);
+  color: var(--green-dark);
+}
+.check-item-avatar input { accent-color: var(--green-dark); cursor: pointer; }

@@ -22,6 +22,7 @@
     <main>
       <!-- Wedstrijden tab -->
       <div id="tab-matches" class="tab-content active">
+        <div id="team-photo-area"></div>
         <div class="content-header">
           <h2>Wedstrijden</h2>
           <button class="btn-primary" data-action="add-match">+ Toevoegen</button>
@@ -121,6 +122,35 @@
     </div>
   </div>
 
+  <!-- Modal: Speelster bewerken -->
+  <div id="modal-edit-player" class="modal hidden">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3>Speelster bewerken</h3>
+        <button class="icon-btn modal-close" data-modal="modal-edit-player">✕</button>
+      </div>
+      <form id="form-edit-player" class="modal-body">
+        <input type="hidden" name="playerId">
+        <div class="form-group">
+          <label>Naam *</label>
+          <input type="text" name="name" placeholder="Naam speelster" required>
+        </div>
+        <div class="form-group">
+          <label>Foto</label>
+          <label class="photo-upload-area">
+            <div id="edit-player-photo-preview" class="photo-preview-initials">?</div>
+            <input type="file" name="photo" accept="image/*" id="edit-player-photo-input">
+            <span class="photo-upload-label">Klik om een foto te kiezen</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close" data-modal="modal-edit-player">Annuleren</button>
+          <button type="submit" class="btn-primary">Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Instellingen -->
   <div id="modal-settings" class="modal hidden">
     <div class="modal-dialog modal-dialog-sm">
@@ -132,6 +162,14 @@
         <div class="form-group">
           <label>Teamnaam</label>
           <input type="text" id="input-teamname" placeholder="Naam van je team">
+        </div>
+        <div class="form-group">
+          <label>Teamfoto</label>
+          <label class="photo-upload-area">
+            <div id="team-photo-settings-preview"></div>
+            <input type="file" id="input-team-photo" accept="image/*">
+            <span class="photo-upload-label">Klik om een teamfoto te kiezen</span>
+          </label>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary modal-close" data-modal="modal-settings">Annuleren</button>
