@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Cobaltblauwe achtergrond -->
+  <rect width="512" height="512" fill="#1a4fa0"/>
+  <!-- Tennibal (geel-groen) -->
+  <circle cx="256" cy="256" r="165" fill="#c9e800"/>
+  <!-- Naad boven -->
+  <path d="M 118 222 Q 190 138 256 158 Q 322 178 394 222"
+        fill="none" stroke="white" stroke-width="23" stroke-linecap="round"/>
+  <!-- Naad onder -->
+  <path d="M 118 290 Q 190 374 256 354 Q 322 334 394 290"
+        fill="none" stroke="white" stroke-width="23" stroke-linecap="round"/>
+</svg>

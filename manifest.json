@@ -1,0 +1,17 @@
+{
+  "name": "Voorjaarscompetitie 2026",
+  "short_name": "Tennis",
+  "description": "Tennis team app voor de voorjaarscompetitie",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a4fa0",
+  "theme_color": "#1a4fa0",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
