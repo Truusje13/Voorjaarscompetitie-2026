@@ -5,15 +5,15 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --green-dark:   #2d6a4f;
-  --green-mid:    #40916c;
-  --green-light:  #74c69d;
-  --green-bg:     #d8f3dc;
-  --green-pale:   #f0faf2;
+  --green-dark:   #1a4fa0;
+  --green-mid:    #2563eb;
+  --green-light:  #60a5fa;
+  --green-bg:     #dbeafe;
+  --green-pale:   #eff6ff;
   --red:          #c1121f;
   --red-light:    #fdd;
   --orange:       #e76f00;
-  --text:         #1a1a2e;
+  --text:         #0f172a;
   --text-muted:   #6b7280;
   --border:       #e2e8f0;
   --card-shadow:  0 1px 4px rgba(0,0,0,.08);
@@ -655,7 +655,7 @@ main {
   margin-bottom: 16px;
   transition: background .15s;
 }
-.team-photo-placeholder:hover { background: #c7edcc; }
+.team-photo-placeholder:hover { background: #bfdbfe; }
 
 /* ============================================================
    AVATARS
