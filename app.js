@@ -292,7 +292,13 @@ function renderStandings() {
     return
   }
 
-  const sorted = [...standings].sort((a, b) => (b.points - a.points) || (b.won - a.won))
+  const sorted = [...standings].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
+    if (b.won    !== a.won)    return b.won - a.won
+    const aDiff = (a.setsFor || 0) - (a.setsAgainst || 0)
+    const bDiff = (b.setsFor || 0) - (b.setsAgainst || 0)
+    return bDiff - aDiff
+  })
   container.innerHTML = `
     <div class="standings-wrap">
       <table class="standings-tbl">
@@ -305,6 +311,7 @@ function renderStandings() {
             <th title="Gelijk">G</th>
             <th title="Verloren">V</th>
             <th title="Punten">Ptn</th>
+            <th title="Sets voor-tegen">Sets</th>
             <th></th>
           </tr>
         </thead>
@@ -318,6 +325,7 @@ function renderStandings() {
               <td>${s.draw || 0}</td>
               <td>${s.lost || 0}</td>
               <td class="col-pts"><strong>${s.points || 0}</strong></td>
+              <td class="col-sets">${s.setsFor || 0}-${s.setsAgainst || 0}</td>
               <td class="col-actions">
                 <button class="btn-icon-edit" data-action="edit-standing" data-id="${s.id}" title="Bewerken">✏️</button>
                 <button class="btn-icon-danger" data-action="delete-standing" data-id="${s.id}" title="Verwijderen">🗑️</button>
@@ -325,7 +333,7 @@ function renderStandings() {
             </tr>`).join('')}
         </tbody>
       </table>
-      <p class="standings-hint">Ptn = W×2 + G×1, of handmatig invullen</p>
+      <p class="standings-hint">Ptn = W×2 + G×1 · Tiebreaker: sets</p>
     </div>`
 }
 
@@ -703,10 +711,12 @@ function openStandingForm(standingId) {
     document.getElementById('modal-standing-title').textContent = 'Ploeg bewerken'
     form.elements.standingId.value = s.id
     form.elements.team.value       = s.team
-    form.elements.won.value        = s.won    || 0
-    form.elements.draw.value       = s.draw   || 0
-    form.elements.lost.value       = s.lost   || 0
-    form.elements.points.value     = s.points || 0
+    form.elements.won.value        = s.won         || 0
+    form.elements.draw.value       = s.draw        || 0
+    form.elements.lost.value       = s.lost        || 0
+    form.elements.points.value     = s.points      || 0
+    form.elements.setsFor.value    = s.setsFor     || 0
+    form.elements.setsAgainst.value = s.setsAgainst || 0
   } else {
     document.getElementById('modal-standing-title').textContent = 'Ploeg toevoegen'
     form.elements.standingId.value = ''
@@ -718,11 +728,13 @@ function saveStandingForm(e) {
   e.preventDefault()
   const form = e.target
   const data = {
-    team:   form.elements.team.value.trim(),
-    won:    parseInt(form.elements.won.value)    || 0,
-    draw:   parseInt(form.elements.draw.value)   || 0,
-    lost:   parseInt(form.elements.lost.value)   || 0,
-    points: parseInt(form.elements.points.value) || 0,
+    team:        form.elements.team.value.trim(),
+    won:         parseInt(form.elements.won.value)         || 0,
+    draw:        parseInt(form.elements.draw.value)        || 0,
+    lost:        parseInt(form.elements.lost.value)        || 0,
+    points:      parseInt(form.elements.points.value)      || 0,
+    setsFor:     parseInt(form.elements.setsFor.value)     || 0,
+    setsAgainst: parseInt(form.elements.setsAgainst.value) || 0,
   }
   if (!state.standings) state.standings = []
   const standingId = form.elements.standingId.value

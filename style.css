@@ -870,6 +870,7 @@ main {
 
 .col-pos { color: var(--text-muted); font-weight: 700; width: 28px; }
 .col-pts strong { color: var(--green-dark); }
+.col-sets { color: var(--text-muted); font-size: .82rem; }
 .col-actions { white-space: nowrap; width: 72px; }
 
 .standings-hint {
