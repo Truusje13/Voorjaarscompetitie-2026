@@ -22,6 +22,7 @@
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="matches">Wedstrijden</button>
         <button class="tab-btn" data-tab="players">Speelsters</button>
+        <button class="tab-btn" data-tab="training">Training</button>
         <button class="tab-btn" data-tab="standings">Stand</button>
       </nav>
     </header>
@@ -46,6 +47,15 @@
         <div id="players-list"></div>
       </div>
 
+      <!-- Training tab -->
+      <div id="tab-training" class="tab-content">
+        <div class="content-header">
+          <h2>Trainingen</h2>
+          <button class="btn-primary" data-action="add-training">+ Voorstel</button>
+        </div>
+        <div id="training-list"></div>
+      </div>
+
       <!-- Stand tab -->
       <div id="tab-standings" class="tab-content">
         <div id="standings-knltb-btn"></div>
@@ -56,6 +66,17 @@
         <div id="standings-table"></div>
       </div>
     </main>
+  </div>
+
+  <!-- Training detail overlay -->
+  <div id="overlay-training" class="overlay hidden">
+    <div class="overlay-panel">
+      <div class="overlay-header">
+        <h2 id="overlay-training-title">Training</h2>
+        <button class="icon-btn" data-action="close-training-overlay">✕</button>
+      </div>
+      <div id="overlay-training-content" class="overlay-body"></div>
+    </div>
   </div>
 
   <!-- Match detail overlay -->
@@ -197,6 +218,41 @@
           <button type="button" class="btn-primary" data-action="save-settings">Opslaan</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Training voorstellen -->
+  <div id="modal-training" class="modal hidden">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3 id="modal-training-title">Training voorstellen</h3>
+        <button class="icon-btn modal-close" data-modal="modal-training">✕</button>
+      </div>
+      <form id="form-training" class="modal-body">
+        <input type="hidden" name="trainingId">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tijd</label>
+            <input type="time" name="time">
+          </div>
+          <div class="form-group">
+            <label>Locatie</label>
+            <input type="text" name="location" placeholder="Baan / park">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notities</label>
+          <textarea name="notes" rows="2" placeholder="Bijv. 'Looptraining'"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close" data-modal="modal-training">Annuleren</button>
+          <button type="submit" class="btn-primary">Opslaan</button>
+        </div>
+      </form>
     </div>
   </div>
 

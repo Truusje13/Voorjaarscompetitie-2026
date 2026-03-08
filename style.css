@@ -805,6 +805,77 @@ main {
 .check-item-avatar input { accent-color: var(--green-dark); cursor: pointer; }
 
 /* ============================================================
+   TRAINING TAB
+   ============================================================ */
+.training-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  border-left: 4px solid var(--green-light);
+  transition: box-shadow .15s, transform .1s;
+}
+.training-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  transform: translateY(-1px);
+}
+.training-card.past { opacity: .85; }
+
+.training-date {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.training-meta {
+  font-size: .84rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.training-avail-summary {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.avail-pill {
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #f3f4f6;
+}
+
+/* Availability buttons in detail overlay */
+.avail-btn {
+  width: 36px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: white;
+  font-size: .95rem;
+  cursor: pointer;
+  transition: all .15s;
+  opacity: .45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.avail-btn:hover        { opacity: 1; border-color: var(--green-mid); }
+.avail-btn.active-yes   { opacity: 1; background: #dcfce7; border-color: #16a34a; }
+.avail-btn.active-maybe { opacity: 1; background: #fef3c7; border-color: #f59e0b; }
+.avail-btn.active-no    { opacity: 1; background: #fee2e2; border-color: #dc2626; }
+
+/* Smaller tab font on narrow screens with 4+ tabs */
+@media (max-width: 420px) {
+  .tab-btn { font-size: .8rem; padding: 10px 4px; }
+}
+
+/* ============================================================
    STANDINGS TAB
    ============================================================ */
 .knltb-link-btn {

@@ -32,6 +32,7 @@ const DEMO_STATE = {
   teamPhoto: null,
   players:   [],
   matches:   [],
+  trainings: [],
   standings: [],
   knltbUrl:  ''
 }
@@ -51,6 +52,7 @@ async function loadState() {
     const snap = await getDoc(STATE)
     if (snap.exists()) {
       state = snap.data()
+      state.trainings = state.trainings || []
       state.standings = state.standings || []
       if (state.knltbUrl === undefined) state.knltbUrl = ''
     } else {
@@ -72,15 +74,17 @@ function setupSync() {
   onSnapshot(STATE, snap => {
     if (!snap.exists()) return
     state = snap.data()
+    state.trainings = state.trainings || []
     state.standings = state.standings || []
     if (state.knltbUrl === undefined) state.knltbUrl = ''
     renderHeader()
     renderTeamPhoto()
     renderMatchList()
     renderPlayerList()
+    renderTrainingList()
     renderStandings()
     renderKnltbLink()
-    // Match detail NIET opnieuw renderen om invulvelden niet te verstoren
+    // Overlays NIET opnieuw renderen om invulvelden niet te verstoren
   })
 }
 
@@ -262,6 +266,187 @@ function renderPlayerList() {
         <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
       </div>
     </div>`).join('')
+}
+
+// ============================================================
+// RENDERING — TRAINING LIST
+// ============================================================
+
+let selectedTrainingId = null
+
+function renderTrainingList() {
+  const container = document.getElementById('training-list')
+  if (!container) return
+  const trainings = state.trainings || []
+
+  if (trainings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Nog geen trainingen voorgesteld.</p>
+        <p>Klik op "+ Voorstel" om een datum te prikken.</p>
+      </div>`
+    return
+  }
+
+  const today   = new Date().toISOString().slice(0, 10)
+  const sorted  = [...trainings].sort((a, b) => a.date.localeCompare(b.date))
+  const upcoming = sorted.filter(t => t.date >= today)
+  const past     = sorted.filter(t => t.date <  today).reverse()
+
+  let html = ''
+  if (upcoming.length) {
+    html += '<h3 class="section-label">Aankomend</h3>'
+    html += upcoming.map(t => trainingCardHtml(t, false)).join('')
+  }
+  if (past.length) {
+    html += '<h3 class="section-label">Geweest</h3>'
+    html += past.map(t => trainingCardHtml(t, true)).join('')
+  }
+  container.innerHTML = html
+}
+
+function trainingCardHtml(training, isPast) {
+  const avail   = training.availability || {}
+  const players = state.players || []
+  const yes     = players.filter(p => avail[p.id] === 'yes').length
+  const no      = players.filter(p => avail[p.id] === 'no').length
+  const maybe   = players.filter(p => avail[p.id] === 'maybe').length
+
+  return `
+    <div class="training-card ${isPast ? 'past' : ''}" data-action="open-training" data-id="${training.id}">
+      <div class="training-date">${formatDate(training.date)}${training.time ? ' om ' + training.time : ''}</div>
+      ${training.location ? `<div class="training-meta">📍 ${escHtml(training.location)}</div>` : ''}
+      ${training.notes    ? `<div class="training-meta">💬 ${escHtml(training.notes)}</div>` : ''}
+      <div class="training-avail-summary">
+        <span class="avail-pill avail-yes">✅ ${yes}</span>
+        <span class="avail-pill avail-maybe">❓ ${maybe}</span>
+        <span class="avail-pill avail-no">❌ ${no}</span>
+      </div>
+    </div>`
+}
+
+function openTrainingDetail(trainingId) {
+  const training = (state.trainings || []).find(t => t.id === trainingId)
+  if (!training) return
+
+  selectedTrainingId = trainingId
+
+  document.getElementById('overlay-training-title').textContent =
+    `Training ${formatDate(training.date)}${training.time ? ' ' + training.time : ''}`
+
+  const avail   = training.availability || {}
+  const players = state.players || []
+
+  const playerRows = players.length === 0
+    ? `<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>`
+    : players.map(p => {
+        const s = avail[p.id] ?? null
+        return `
+          <div class="lineup-row">
+            ${avatarHtml(p, true)}
+            <span class="lineup-name">${escHtml(p.name)}</span>
+            <div class="lineup-btns">
+              <button class="avail-btn ${s === 'yes'   ? 'active-yes'   : ''}"
+                data-action="set-avail" data-player="${p.id}" data-status="yes">✅</button>
+              <button class="avail-btn ${s === 'maybe' ? 'active-maybe' : ''}"
+                data-action="set-avail" data-player="${p.id}" data-status="maybe">❓</button>
+              <button class="avail-btn ${s === 'no'    ? 'active-no'    : ''}"
+                data-action="set-avail" data-player="${p.id}" data-status="no">❌</button>
+            </div>
+          </div>`
+      }).join('')
+
+  document.getElementById('overlay-training-content').innerHTML = `
+    <div class="detail-info">
+      <div class="detail-row">
+        <span class="detail-label">Datum</span>
+        <span>${formatDate(training.date)}</span>
+      </div>
+      ${training.time     ? `<div class="detail-row"><span class="detail-label">Tijd</span><span>${training.time}</span></div>` : ''}
+      ${training.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><span>📍 ${escHtml(training.location)}</span></div>` : ''}
+      ${training.notes    ? `<div class="detail-row"><span class="detail-label">Notities</span><span>${escHtml(training.notes)}</span></div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <h4>🙋 Wie kan er?</h4>
+      <div class="lineup-list">${playerRows}</div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="btn-secondary" data-action="edit-training">✏️ Bewerken</button>
+      <button class="btn-danger"    data-action="delete-training">🗑️ Verwijderen</button>
+    </div>`
+
+  document.getElementById('overlay-training').classList.remove('hidden')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeTrainingOverlay() {
+  document.getElementById('overlay-training').classList.add('hidden')
+  document.body.style.overflow = ''
+  selectedTrainingId = null
+}
+
+function setTrainingAvailability(trainingId, playerId, status) {
+  const training = (state.trainings || []).find(t => t.id === trainingId)
+  if (!training) return
+  if (!training.availability) training.availability = {}
+  training.availability[playerId] === status
+    ? delete training.availability[playerId]
+    : (training.availability[playerId] = status)
+  saveState()
+  renderTrainingList()
+  openTrainingDetail(trainingId)
+}
+
+function openTrainingForm(trainingId) {
+  const form = document.getElementById('form-training')
+  form.reset()
+  if (trainingId) {
+    const t = (state.trainings || []).find(x => x.id === trainingId)
+    if (!t) return
+    document.getElementById('modal-training-title').textContent = 'Training bewerken'
+    form.elements.trainingId.value = t.id
+    form.elements.date.value       = t.date
+    form.elements.time.value       = t.time     || ''
+    form.elements.location.value   = t.location || ''
+    form.elements.notes.value      = t.notes    || ''
+  } else {
+    document.getElementById('modal-training-title').textContent = 'Training voorstellen'
+    form.elements.trainingId.value = ''
+  }
+  document.getElementById('modal-training').classList.remove('hidden')
+}
+
+function saveTrainingForm(e) {
+  e.preventDefault()
+  const form = e.target
+  const data = {
+    date:     form.elements.date.value,
+    time:     form.elements.time.value,
+    location: form.elements.location.value.trim(),
+    notes:    form.elements.notes.value.trim(),
+  }
+  if (!state.trainings) state.trainings = []
+  const trainingId = form.elements.trainingId.value
+  if (trainingId) {
+    const t = state.trainings.find(x => x.id === trainingId)
+    if (t) Object.assign(t, data)
+  } else {
+    state.trainings.push({ id: generateId(), availability: {}, ...data })
+  }
+  saveState()
+  closeModal('modal-training')
+  renderTrainingList()
+  if (trainingId && trainingId === selectedTrainingId) openTrainingDetail(trainingId)
+}
+
+function deleteTraining(trainingId) {
+  if (!confirm('Weet je zeker dat je dit trainingsvoorstel wilt verwijderen?')) return
+  state.trainings = (state.trainings || []).filter(t => t.id !== trainingId)
+  saveState()
+  closeTrainingOverlay()
+  renderTrainingList()
 }
 
 // ============================================================
@@ -812,6 +997,14 @@ document.addEventListener('click', e => {
     case 'save-result':
       if (selectedMatchId) saveResult(selectedMatchId)
       break
+    case 'open-training':         openTrainingDetail(btn.dataset.id); break
+    case 'close-training-overlay': closeTrainingOverlay(); break
+    case 'add-training':          openTrainingForm(null); break
+    case 'edit-training':         openTrainingForm(selectedTrainingId); break
+    case 'delete-training':       deleteTraining(selectedTrainingId); break
+    case 'set-avail':
+      if (selectedTrainingId) setTrainingAvailability(selectedTrainingId, btn.dataset.player, btn.dataset.status)
+      break
     case 'open-settings':   openSettings(); break
     case 'save-settings':   saveSettings(); break
     case 'add-standing':    openStandingForm(null); break
@@ -841,6 +1034,11 @@ document.getElementById('form-match').addEventListener('submit', saveMatchForm)
 document.getElementById('form-player').addEventListener('submit', savePlayerForm)
 document.getElementById('form-edit-player').addEventListener('submit', saveEditPlayerForm)
 document.getElementById('form-standing').addEventListener('submit', saveStandingForm)
+document.getElementById('form-training').addEventListener('submit', saveTrainingForm)
+
+document.getElementById('overlay-training').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeTrainingOverlay()
+})
 
 // ============================================================
 // INIT
@@ -855,6 +1053,7 @@ async function init() {
   renderHeader()
   renderMatchList()
   renderPlayerList()
+  renderTrainingList()
   renderStandings()
   renderKnltbLink()
 }
