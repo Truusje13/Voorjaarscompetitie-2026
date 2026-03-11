@@ -643,12 +643,12 @@ function openMatchDetail(matchId) {
           <input type="text" id="input-score" class="input-score"
             placeholder="bv. 3-1" maxlength="10"
             value="${escAttr(match.result?.score ?? '')}">
-          <span class="result-score-label">Overall rubberscore</span>
+          <span class="result-score-label">Eindstand (bv. 3-1)</span>
         </div>
         <div class="rubber-inputs">
           ${[0,1,2,3].map(i => `
             <div class="rubber-row">
-              <span class="rubber-label">Rubber ${i+1}</span>
+              <span class="rubber-label">Wedstrijd ${i+1}</span>
               <input type="text" class="input-rubber" data-rubber="${i}"
                 placeholder="bv. 6-3 6-2"
                 value="${escAttr(match.result?.rubbers?.[i] ?? '')}">
