@@ -3,47 +3,43 @@
    Zorgt dat de app installeerbaar is en offline werkt
    ============================================================ */
 
-const CACHE = 'tennis-app-v5'
-const STATIC = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './icon.svg',
-  './manifest.json'
-]
+const CACHE = 'tennis-app-v6'
 
-// Bij installatie: sla statische bestanden op in de cache
+// Bij installatie: sla ALLEEN het icoontje en manifest op
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC))
+    caches.open(CACHE).then(c => c.addAll(['./icon.svg', './manifest.json']))
   )
   self.skipWaiting()
 })
 
-// Bij activatie: verwijder oude caches
+// Bij activatie: verwijder ALLE oude caches (ook v1–v5)
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.map(k => caches.delete(k)))
     )
   )
   self.clients.claim()
 })
 
-// Verzoeken: network-first voor eigen bestanden, zodat updates meteen zichtbaar zijn
+// Verzoeken: HTML/JS/CSS ALTIJD vers van het netwerk halen
 self.addEventListener('fetch', e => {
-  // Firebase en andere externe verzoeken altijd via netwerk
   if (!e.request.url.startsWith(self.location.origin)) return
 
-  e.respondWith(
-    fetch(e.request)
-      .then(response => {
-        // Sla de verse versie op in de cache
-        const clone = response.clone()
-        caches.open(CACHE).then(c => c.put(e.request, clone))
-        return response
-      })
-      .catch(() => caches.match(e.request)) // Offline: gebruik cache
-  )
+  const url = new URL(e.request.url)
+  const isCachedAsset = url.pathname.endsWith('.svg') ||
+                        url.pathname.endsWith('manifest.json')
+
+  if (isCachedAsset) {
+    // Icoontje en manifest: cache-first (veranderen zelden)
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request))
+    )
+  } else {
+    // index.html, app.js, style.css: ALTIJD netwerk, nooit cachen
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    )
+  }
 })
