@@ -554,16 +554,36 @@ function openMatchDetail(matchId) {
 
   const noPlayers = !state.players || state.players.length === 0
 
+  const _statusOrder  = { plays: 0, reserve: 1, out: 2 }
+  const _sortedP      = noPlayers ? [] : [...state.players].sort((a, b) => {
+    const sa = match.lineup?.[a.id] ?? null
+    const sb = match.lineup?.[b.id] ?? null
+    return (_statusOrder[sa] ?? 3) - (_statusOrder[sb] ?? 3)
+  })
+  const _lPlays   = noPlayers ? [] : state.players.filter(p => match.lineup?.[p.id] === 'plays')
+  const _lReserve = noPlayers ? [] : state.players.filter(p => match.lineup?.[p.id] === 'reserve')
+  const _lOut     = noPlayers ? [] : state.players.filter(p => match.lineup?.[p.id] === 'out')
+  const _lUnknown = noPlayers ? [] : state.players.filter(p => !match.lineup?.[p.id])
+  const _fn = p => escHtml(p.name.split(' ')[0])
+
   const lineupSection = noPlayers
     ? `<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>`
     : `
       <div class="detail-section">
         <h4>👥 Opstelling</h4>
+        ${(_lPlays.length || _lReserve.length || _lOut.length) ? `
+        <div class="lineup-summary">
+          ${_lPlays.length   ? `<span class="lineup-chip chip-plays">✅ ${_lPlays.map(_fn).join(', ')}</span>` : ''}
+          ${_lReserve.length ? `<span class="lineup-chip chip-reserve">⏳ ${_lReserve.map(_fn).join(', ')}</span>` : ''}
+          ${_lOut.length     ? `<span class="lineup-chip chip-out">❌ ${_lOut.map(_fn).join(', ')}</span>` : ''}
+          ${_lUnknown.length ? `<span class="lineup-chip chip-unknown">❓ ${_lUnknown.length} onbekend</span>` : ''}
+        </div>` : ''}
         <div class="lineup-list">
-          ${state.players.map(p => {
+          ${_sortedP.map(p => {
             const s = match.lineup?.[p.id] ?? null
+            const rc = s === 'plays' ? 'status-plays' : s === 'reserve' ? 'status-reserve' : s === 'out' ? 'status-out' : ''
             return `
-              <div class="lineup-row">
+              <div class="lineup-row ${rc}">
                 ${avatarHtml(p, true)}
                 <span class="lineup-name">${escHtml(p.name)}</span>
                 <div class="lineup-btns">
