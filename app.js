@@ -228,7 +228,7 @@ function matchCardHtml(match, isPast) {
         ${resultBadgeHtml(match)}
       </div>
       <div class="match-datetime">${formatDate(match.date)}${match.time ? ' om ' + match.time : ''}</div>
-      ${match.location ? `<div class="match-location"><a href="https://maps.google.com/?q=${encodeURIComponent(match.location)}" target="_blank" rel="noopener" class="maps-link">📍 ${escHtml(match.location)}</a></div>` : ''}
+      ${match.location ? `<div class="match-location" data-action="open-maps" data-location="${escAttr(match.location)}">📍 ${escHtml(match.location)} <span class="maps-icon">🗺️</span></div>` : ''}
       <div class="match-players">${playingStr}</div>
       ${reserveStr ? `<div class="match-reserve">${reserveStr}</div>` : ''}
       ${(driverStr || cakeStr) ? `
@@ -315,7 +315,7 @@ function trainingCardHtml(training, isPast) {
   return `
     <div class="training-card ${isPast ? 'past' : ''}" data-action="open-training" data-id="${training.id}">
       <div class="training-date">${formatDate(training.date)}${training.time ? ' om ' + training.time : ''}</div>
-      ${training.location ? `<div class="training-meta"><a href="https://maps.google.com/?q=${encodeURIComponent(training.location)}" target="_blank" rel="noopener" class="maps-link">📍 ${escHtml(training.location)}</a></div>` : ''}
+      ${training.location ? `<div class="training-meta" data-action="open-maps" data-location="${escAttr(training.location)}">📍 ${escHtml(training.location)} <span class="maps-icon">🗺️</span></div>` : ''}
       ${training.notes    ? `<div class="training-meta">💬 ${escHtml(training.notes)}</div>` : ''}
       <div class="training-avail-summary">
         <span class="avail-pill avail-yes">✅ ${yes}</span>
@@ -363,7 +363,7 @@ function openTrainingDetail(trainingId) {
         <span>${formatDate(training.date)}</span>
       </div>
       ${training.time     ? `<div class="detail-row"><span class="detail-label">Tijd</span><span>${training.time}</span></div>` : ''}
-      ${training.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><span><a href="https://maps.google.com/?q=${encodeURIComponent(training.location)}" target="_blank" rel="noopener" class="maps-link">📍 ${escHtml(training.location)}</a></span></div>` : ''}
+      ${training.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><button class="maps-link" data-action="open-maps" data-location="${escAttr(training.location)}">📍 ${escHtml(training.location)} 🗺️</button></div>` : ''}
       ${training.notes    ? `<div class="detail-row"><span class="detail-label">Notities</span><span>${escHtml(training.notes)}</span></div>` : ''}
     </div>
 
@@ -594,7 +594,7 @@ function openMatchDetail(matchId) {
         <span>${formatDate(match.date)}</span>
       </div>
       ${match.time ? `<div class="detail-row"><span class="detail-label">Tijd</span><span>${match.time}</span></div>` : ''}
-      ${match.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><span><a href="https://maps.google.com/?q=${encodeURIComponent(match.location)}" target="_blank" rel="noopener" class="maps-link">📍 ${escHtml(match.location)}</a></span></div>` : ''}
+      ${match.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><button class="maps-link" data-action="open-maps" data-location="${escAttr(match.location)}">📍 ${escHtml(match.location)} 🗺️</button></div>` : ''}
       ${match.notes ? `<div class="detail-row"><span class="detail-label">Notities</span><span>${escHtml(match.notes)}</span></div>` : ''}
     </div>
 
@@ -999,6 +999,9 @@ document.addEventListener('click', e => {
       break
     case 'save-result':
       if (selectedMatchId) saveResult(selectedMatchId)
+      break
+    case 'open-maps':
+      window.open(`https://maps.google.com/?q=${encodeURIComponent(btn.dataset.location)}`, '_blank')
       break
     case 'open-training':         openTrainingDetail(btn.dataset.id); break
     case 'close-training-overlay': closeTrainingOverlay(); break
