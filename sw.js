@@ -3,7 +3,7 @@
    Zorgt dat de app installeerbaar is en offline werkt
    ============================================================ */
 
-const CACHE = 'tennis-app-v6'
+const CACHE = 'tennis-app-v7'
 
 // Bij installatie: sla ALLEEN het icoontje en manifest op
 self.addEventListener('install', e => {
@@ -13,7 +13,7 @@ self.addEventListener('install', e => {
   self.skipWaiting()
 })
 
-// Bij activatie: verwijder ALLE oude caches (ook v1–v5)
+// Bij activatie: verwijder ALLE oude caches
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -23,7 +23,7 @@ self.addEventListener('activate', e => {
   self.clients.claim()
 })
 
-// Verzoeken: HTML/JS/CSS ALTIJD vers van het netwerk halen
+// Verzoeken: HTML/JS/CSS ALTIJD vers van de server (bypast HTTP-cache)
 self.addEventListener('fetch', e => {
   if (!e.request.url.startsWith(self.location.origin)) return
 
@@ -37,9 +37,11 @@ self.addEventListener('fetch', e => {
       caches.match(e.request).then(cached => cached || fetch(e.request))
     )
   } else {
-    // index.html, app.js, style.css: ALTIJD netwerk, nooit cachen
+    // index.html, app.js, style.css: altijd VERS van de server,
+    // cache: 'no-cache' zorgt dat de browser-HTTP-cache wordt genegeerd
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
+      fetch(new Request(e.request.url, { cache: 'no-cache' }))
+        .catch(() => caches.match(e.request))
     )
   }
 })
