@@ -3,7 +3,7 @@
    Zorgt dat de app installeerbaar is en offline werkt
    ============================================================ */
 
-const CACHE = 'tennis-app-v4'
+const CACHE = 'tennis-app-v5'
 const STATIC = [
   './',
   './index.html',
@@ -31,12 +31,19 @@ self.addEventListener('activate', e => {
   self.clients.claim()
 })
 
-// Verzoeken: gebruik cache voor statische bestanden, netwerk voor Firebase
+// Verzoeken: network-first voor eigen bestanden, zodat updates meteen zichtbaar zijn
 self.addEventListener('fetch', e => {
   // Firebase en andere externe verzoeken altijd via netwerk
   if (!e.request.url.startsWith(self.location.origin)) return
 
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        // Sla de verse versie op in de cache
+        const clone = response.clone()
+        caches.open(CACHE).then(c => c.put(e.request, clone))
+        return response
+      })
+      .catch(() => caches.match(e.request)) // Offline: gebruik cache
   )
 })

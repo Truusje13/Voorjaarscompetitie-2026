@@ -1074,4 +1074,11 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .catch(err => console.log('SW registratie mislukt:', err))
   })
+  // Automatisch herladen als een nieuwe SW de controle overneemt
+  let refreshing = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return
+    refreshing = true
+    window.location.reload()
+  })
 }

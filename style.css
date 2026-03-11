@@ -396,18 +396,19 @@ a.match-location:hover { color: var(--green-mid); }
 
 .lineup-name { font-weight: 600; font-size: .9rem; }
 
-.lineup-btns { display: flex; gap: 6px; }
+.lineup-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
 
 .lineup-btn {
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
   border: 1.5px solid var(--border);
   background: white;
-  font-size: .8rem;
+  font-size: .75rem;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-muted);
   transition: all .15s;
+  white-space: nowrap;
 }
 
 .lineup-btn:hover { border-color: var(--green-mid); color: var(--green-mid); }
