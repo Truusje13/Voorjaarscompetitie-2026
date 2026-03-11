@@ -24,6 +24,7 @@
         <button class="tab-btn" data-tab="players">Speelsters</button>
         <button class="tab-btn" data-tab="training">Training</button>
         <button class="tab-btn" data-tab="standings">Stand</button>
+        <button class="tab-btn" data-tab="chat">💬 Chat</button>
       </nav>
     </header>
 
@@ -64,6 +65,16 @@
           <button class="btn-primary" data-action="add-standing">+ Ploeg</button>
         </div>
         <div id="standings-table"></div>
+      </div>
+
+      <!-- Chat tab -->
+      <div id="tab-chat" class="tab-content">
+        <div id="chat-identity-bar"></div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <form id="form-chat" class="chat-input-form">
+          <input type="text" id="chat-input" placeholder="Typ een bericht..." autocomplete="off" maxlength="500">
+          <button type="submit" class="btn-primary chat-send-btn">➤</button>
+        </form>
       </div>
     </main>
   </div>
@@ -301,6 +312,27 @@
           <button type="submit" class="btn-primary">Opslaan</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Chat identiteit kiezen -->
+  <div id="modal-chat-identity" class="modal hidden">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <h3>Wie ben jij?</h3>
+        <button class="icon-btn modal-close" data-modal="modal-chat-identity">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" style="margin-bottom:12px">Kies je naam zodat anderen weten wie er schrijft.</p>
+        <div id="chat-identity-options" class="chat-identity-grid"></div>
+        <div class="form-group" style="margin-top:16px">
+          <label>Of typ een andere naam</label>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input type="text" id="input-chat-custom-name" placeholder="Jouw naam..." maxlength="30" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit">
+            <button type="button" class="btn-primary btn-sm" data-action="save-chat-identity-custom">Bevestigen</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

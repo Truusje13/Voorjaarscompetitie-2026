@@ -3,7 +3,8 @@
    ============================================================ */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js'
-import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+import { getFirestore, doc, getDoc, setDoc, onSnapshot,
+         collection, addDoc, query, orderBy, limit, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js'
 
 // ============================================================
@@ -21,7 +22,8 @@ const firebaseConfig = {
 
 const fbApp  = initializeApp(firebaseConfig)
 const db     = getFirestore(fbApp)
-const STATE  = doc(db, 'tennis', 'state')
+const STATE    = doc(db, 'tennis', 'state')
+const CHAT_COL = collection(db, 'chat')
 
 // ============================================================
 // STATE
@@ -42,6 +44,11 @@ let state = {}
 // Current UI state
 let activeTab       = 'matches'
 let selectedMatchId = null
+
+// Chat identity (opgeslagen in localStorage, geen login nodig)
+let myPlayerId   = localStorage.getItem('chatMyPlayerId')   || null
+let myPlayerName = localStorage.getItem('chatMyPlayerName') || null
+let chatUnsubscribe = null
 
 // ============================================================
 // PERSISTENCE — Firebase
@@ -1082,6 +1089,7 @@ document.addEventListener('click', e => {
     tabBtn.classList.add('active')
     document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active')
     activeTab = tabBtn.dataset.tab
+    if (activeTab === 'chat') openChatTab()
     return
   }
 
@@ -1131,6 +1139,27 @@ document.addEventListener('click', e => {
     case 'delete-standing': deleteStanding(btn.dataset.id); break
     case 'open-knltb':      if (state.knltbUrl) window.open(state.knltbUrl, '_blank'); break
     case 'save-knltb-url':  saveKnltbUrl(); break
+    case 'change-chat-identity': openChatIdentityModal(); break
+    case 'set-chat-identity':
+      myPlayerId   = btn.dataset.pid
+      myPlayerName = btn.dataset.pname
+      localStorage.setItem('chatMyPlayerId',   myPlayerId)
+      localStorage.setItem('chatMyPlayerName', myPlayerName)
+      closeModal('modal-chat-identity')
+      renderChatIdentityBar()
+      break
+    case 'save-chat-identity-custom': {
+      const name = document.getElementById('input-chat-custom-name').value.trim()
+      if (name) {
+        myPlayerId   = 'guest_' + Date.now()
+        myPlayerName = name
+        localStorage.setItem('chatMyPlayerId',   myPlayerId)
+        localStorage.setItem('chatMyPlayerName', myPlayerName)
+        closeModal('modal-chat-identity')
+        renderChatIdentityBar()
+      }
+      break
+    }
   }
 })
 
@@ -1156,10 +1185,94 @@ document.getElementById('form-player').addEventListener('submit', savePlayerForm
 document.getElementById('form-edit-player').addEventListener('submit', saveEditPlayerForm)
 document.getElementById('form-standing').addEventListener('submit', saveStandingForm)
 document.getElementById('form-training').addEventListener('submit', saveTrainingForm)
+document.getElementById('form-chat').addEventListener('submit', e => { e.preventDefault(); sendChatMessage() })
 
 document.getElementById('overlay-training').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeTrainingOverlay()
 })
+
+// ============================================================
+// CHAT
+// ============================================================
+
+function formatChatTime(date) {
+  return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+}
+
+function setupChatListener() {
+  if (chatUnsubscribe) return
+  const q = query(CHAT_COL, orderBy('createdAt', 'asc'), limit(200))
+  chatUnsubscribe = onSnapshot(q, snap => {
+    renderChatMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  })
+}
+
+function renderChatIdentityBar() {
+  const bar = document.getElementById('chat-identity-bar')
+  if (!bar) return
+  bar.innerHTML = myPlayerName ? `
+    <div class="chat-identity-bar">
+      <span>Je chat als <strong>${escHtml(myPlayerName)}</strong></span>
+      <button class="btn-sm btn-secondary" data-action="change-chat-identity">Wijzigen</button>
+    </div>` : ''
+}
+
+function renderChatMessages(messages) {
+  const container = document.getElementById('chat-messages')
+  if (!container) return
+  if (!messages || messages.length === 0) {
+    container.innerHTML = '<p class="chat-empty">Nog geen berichten. Stuur het eerste bericht! 🎾</p>'
+    return
+  }
+  container.innerHTML = messages.map(msg => {
+    const isMe   = msg.playerId === myPlayerId
+    const player = state.players.find(p => p.id === msg.playerId)
+    const time   = msg.createdAt?.toDate ? formatChatTime(msg.createdAt.toDate()) : ''
+    return `
+      <div class="chat-msg ${isMe ? 'chat-msg-me' : 'chat-msg-other'}">
+        ${!isMe ? `<div class="chat-avatar-wrap">${avatarHtml({ name: msg.playerName, photo: player?.photo }, true)}</div>` : ''}
+        <div class="chat-bubble-wrap">
+          ${!isMe ? `<span class="chat-sender">${escHtml(msg.playerName)}</span>` : ''}
+          <div class="chat-bubble">${escHtml(msg.text)}</div>
+          <span class="chat-time">${time}</span>
+        </div>
+      </div>`
+  }).join('')
+  container.scrollTop = container.scrollHeight
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input')
+  const text  = input?.value.trim()
+  if (!text || !myPlayerName) return
+  input.value = ''
+  await addDoc(CHAT_COL, {
+    playerId:   myPlayerId || ('guest_' + Date.now()),
+    playerName: myPlayerName,
+    text,
+    createdAt:  serverTimestamp()
+  })
+}
+
+function openChatIdentityModal() {
+  const grid = document.getElementById('chat-identity-options')
+  grid.innerHTML = state.players.length
+    ? state.players.map(p => `
+        <button class="chat-identity-btn" data-action="set-chat-identity"
+          data-pid="${p.id}" data-pname="${escAttr(p.name)}">
+          ${avatarHtml(p, true)}
+          <span>${escHtml(p.name)}</span>
+        </button>`).join('')
+    : '<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>'
+  document.getElementById('input-chat-custom-name').value = ''
+  document.getElementById('modal-chat-identity').classList.remove('hidden')
+}
+
+function openChatTab() {
+  setupChatListener()
+  renderChatIdentityBar()
+  if (!myPlayerName) openChatIdentityModal()
+}
 
 // ============================================================
 // INIT
