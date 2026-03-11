@@ -579,6 +579,7 @@ function openMatchDetail(matchId) {
         </div>
       </div>
 
+      ${!match.isHome ? `
       <div class="detail-section">
         <h4>🚗 Vervoer — wie rijdt?</h4>
         <div class="check-grid">
@@ -590,7 +591,7 @@ function openMatchDetail(matchId) {
               <span>${escHtml(p.name)}</span>
             </label>`).join('')}
         </div>
-      </div>
+      </div>` : ''}
 
       ${match.isHome ? `
       <div class="detail-section">
