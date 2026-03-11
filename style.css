@@ -793,6 +793,8 @@ a.match-location:hover { color: var(--green-mid); }
 }
 .photo-upload-area:hover { border-color: var(--green-mid); background: var(--green-pale); }
 
+#btn-remove-player-photo { margin-top: 6px; }
+
 .photo-upload-area input[type="file"] {
   display: none;
 }

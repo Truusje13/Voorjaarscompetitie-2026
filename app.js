@@ -849,6 +849,13 @@ function openEditPlayerModal(playerId) {
     preview.className = 'photo-preview-initials'
   }
 
+  // Show/hide remove button
+  const removeBtn = document.getElementById('btn-remove-player-photo')
+  removeBtn.classList.toggle('hidden', !player.photo)
+
+  // Reset file input
+  document.getElementById('edit-player-photo-input').value = ''
+
   document.getElementById('modal-edit-player').classList.remove('hidden')
 }
 
@@ -885,6 +892,8 @@ document.getElementById('edit-player-photo-input').addEventListener('change', as
   img.className = 'photo-preview'
   img.src = data
   container.replaceWith(img)
+  // Toon verwijder-knop zodra er een (nieuwe) foto is gekozen
+  document.getElementById('btn-remove-player-photo').classList.remove('hidden')
 })
 
 // Live team photo preview in settings
@@ -949,6 +958,21 @@ function deleteMatch(matchId) {
   saveState()
   closeOverlay()
   renderMatchList()
+}
+
+function removePlayerPhoto() {
+  const playerId = document.getElementById('form-edit-player').elements.playerId.value
+  const player = getPlayer(playerId)
+  if (!player) return
+  player.photo = null
+  saveState()
+  renderPlayerList()
+  if (selectedMatchId) openMatchDetail(selectedMatchId)
+  // Reset preview naar initialen
+  const prev = document.getElementById('edit-player-photo-preview')
+  if (prev) prev.outerHTML = `<div id="edit-player-photo-preview" class="photo-preview-initials">${escHtml(getInitials(player.name))}</div>`
+  document.getElementById('edit-player-photo-input').value = ''
+  document.getElementById('btn-remove-player-photo').classList.add('hidden')
 }
 
 function deletePlayer(playerId) {
@@ -1075,7 +1099,8 @@ document.addEventListener('click', e => {
     case 'delete-match':  deleteMatch(selectedMatchId); break
     case 'add-player':    openPlayerForm(); break
     case 'edit-player':   openEditPlayerModal(btn.dataset.id); break
-    case 'delete-player': deletePlayer(btn.dataset.id); break
+    case 'delete-player':        deletePlayer(btn.dataset.id); break
+    case 'remove-player-photo':  removePlayerPhoto(); break
     case 'set-lineup':
       if (selectedMatchId) setLineup(selectedMatchId, btn.dataset.player, btn.dataset.status)
       break
