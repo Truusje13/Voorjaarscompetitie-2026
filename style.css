@@ -411,10 +411,15 @@ a.match-location:hover { color: var(--green-mid); }
   white-space: nowrap;
 }
 
-.lineup-btn:hover { border-color: var(--green-mid); color: var(--green-mid); }
-.lineup-btn.active-plays   { background: var(--green-bg); border-color: var(--green-mid); color: var(--green-dark); }
-.lineup-btn.active-reserve { background: #fff3e0; border-color: #f59e0b; color: #92400e; }
-.lineup-btn.active-out     { background: #fee2e2; border-color: var(--red); color: var(--red); }
+/* Elke knop heeft altijd zijn eigen kleur (ook ongeselecteerd) */
+.lineup-btn[data-status="plays"]   { border-color: #86efac; color: var(--green-dark); }
+.lineup-btn[data-status="reserve"] { border-color: #fbbf24; color: #92400e; }
+.lineup-btn[data-status="out"]     { border-color: #fca5a5; color: var(--red); }
+
+/* Geselecteerde knop: gevulde achtergrond */
+.lineup-btn.active-plays   { background: var(--green-bg);  border-color: var(--green-mid); color: var(--green-dark); }
+.lineup-btn.active-reserve { background: #fff3e0; border-color: #f59e0b;         color: #92400e; }
+.lineup-btn.active-out     { background: #fee2e2; border-color: var(--red);      color: var(--red); }
 
 /* Checkbox grid */
 .check-grid {
