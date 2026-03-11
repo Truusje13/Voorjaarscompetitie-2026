@@ -411,8 +411,9 @@ a.match-location:hover { color: var(--green-mid); }
 }
 
 .lineup-btn:hover { border-color: var(--green-mid); color: var(--green-mid); }
-.lineup-btn.active-plays { background: var(--green-bg); border-color: var(--green-mid); color: var(--green-dark); }
+.lineup-btn.active-plays   { background: var(--green-bg); border-color: var(--green-mid); color: var(--green-dark); }
 .lineup-btn.active-reserve { background: #fff3e0; border-color: #f59e0b; color: #92400e; }
+.lineup-btn.active-out     { background: #fee2e2; border-color: var(--red); color: var(--red); }
 
 /* Checkbox grid */
 .check-grid {

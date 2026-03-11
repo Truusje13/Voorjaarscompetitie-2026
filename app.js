@@ -554,6 +554,8 @@ function openMatchDetail(matchId) {
                     data-action="set-lineup" data-player="${p.id}" data-status="plays">Speelt</button>
                   <button class="lineup-btn ${s === 'reserve' ? 'active-reserve' : ''}"
                     data-action="set-lineup" data-player="${p.id}" data-status="reserve">Reserve</button>
+                  <button class="lineup-btn ${s === 'out'     ? 'active-out'     : ''}"
+                    data-action="set-lineup" data-player="${p.id}" data-status="out">Speelt niet</button>
                 </div>
               </div>`
           }).join('')}
