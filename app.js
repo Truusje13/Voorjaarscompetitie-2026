@@ -458,11 +458,26 @@ function deleteTraining(trainingId) {
 function renderKnltbLink() {
   const el = document.getElementById('standings-knltb-btn')
   if (!el) return
-  if (state.knltbUrl) {
-    el.innerHTML = `<button class="knltb-link-btn" data-action="open-knltb">🔗 Bekijk stand op KNLTB</button>`
-  } else {
-    el.innerHTML = `<p class="knltb-hint">Voeg de KNLTB-link toe via ⚙️ Instellingen zodra de competitie is begonnen.</p>`
-  }
+  el.innerHTML = `
+    <div class="knltb-section">
+      ${state.knltbUrl
+        ? `<button class="knltb-link-btn" data-action="open-knltb">🔗 Bekijk stand op KNLTB</button>`
+        : `<p class="knltb-hint">Voer hieronder de KNLTB-link in zodra de competitie is begonnen.</p>`}
+      <div class="knltb-edit">
+        <input type="text" id="input-knltb-url" class="knltb-input"
+          placeholder="https://mijnknltb.toernooi.nl/..."
+          value="${escAttr(state.knltbUrl || '')}">
+        <button class="btn-secondary btn-sm" data-action="save-knltb-url">Opslaan</button>
+      </div>
+    </div>`
+}
+
+function saveKnltbUrl() {
+  let url = (document.getElementById('input-knltb-url')?.value ?? '').trim()
+  if (url && !url.startsWith('http')) url = 'https://' + url
+  state.knltbUrl = url
+  saveState()
+  renderKnltbLink()
 }
 
 function renderStandings() {
@@ -765,7 +780,6 @@ function savePlayerForm(e) {
 
 function openSettings() {
   document.getElementById('input-teamname').value = state.teamName
-  document.getElementById('input-knltb-url').value = state.knltbUrl || ''
   // Show current team photo preview
   const preview = document.getElementById('team-photo-settings-preview')
   preview.innerHTML = state.teamPhoto
@@ -777,9 +791,6 @@ function openSettings() {
 async function saveSettings() {
   const name = document.getElementById('input-teamname').value.trim()
   if (name) state.teamName = name
-  let knltbUrl = document.getElementById('input-knltb-url').value.trim()
-  if (knltbUrl && !knltbUrl.startsWith('http')) knltbUrl = 'https://' + knltbUrl
-  state.knltbUrl = knltbUrl
 
   const photoInput = document.getElementById('input-team-photo')
   if (photoInput.files[0]) {
@@ -1070,6 +1081,7 @@ document.addEventListener('click', e => {
     case 'edit-standing':   openStandingForm(btn.dataset.id); break
     case 'delete-standing': deleteStanding(btn.dataset.id); break
     case 'open-knltb':      if (state.knltbUrl) window.open(state.knltbUrl, '_blank'); break
+    case 'save-knltb-url':  saveKnltbUrl(); break
   }
 })
 
