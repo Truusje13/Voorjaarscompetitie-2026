@@ -814,6 +814,35 @@ a.match-location:hover { color: var(--green-mid); }
 }
 .check-item-avatar input { accent-color: var(--green-dark); cursor: pointer; }
 
+/* Invallers */
+.invaller-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  margin-bottom: 6px;
+  font-size: .9rem;
+}
+
+.invaller-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.invaller-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: .9rem;
+  font-family: inherit;
+}
+.invaller-input:focus { outline: none; border-color: var(--green-mid); }
+
 /* Google Maps links */
 .maps-icon { font-size: .8em; opacity: .7; }
 

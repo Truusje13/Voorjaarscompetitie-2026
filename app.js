@@ -216,6 +216,7 @@ function matchCardHtml(match, isPast) {
   const reserveStr = reserve.length ? `Reserve: ${reserve.map(p => p.name).join(', ')}` : ''
   const driverStr  = drivers.length ? `🚗 ${drivers.join(', ')}` : ''
   const cakeStr    = cake.length    ? `🍰 ${cake.join(', ')}`    : ''
+  const invStr     = (match.invallers || []).length ? `🔄 ${match.invallers.join(', ')}` : ''
 
   return `
     <div class="match-card ${match.isHome ? 'home' : 'away'} ${isPast ? 'past' : ''}"
@@ -231,10 +232,11 @@ function matchCardHtml(match, isPast) {
       ${match.location ? `<a class="match-location" href="https://maps.google.com/?q=${encodeURIComponent(match.location)}" target="_blank" rel="noopener">📍 ${escHtml(match.location)} <span class="maps-icon">🗺️</span></a>` : ''}
       <div class="match-players">${playingStr}</div>
       ${reserveStr ? `<div class="match-reserve">${reserveStr}</div>` : ''}
-      ${(driverStr || cakeStr) ? `
+      ${(driverStr || cakeStr || invStr) ? `
         <div class="match-meta">
           ${driverStr ? `<span class="match-meta-item">${driverStr}</span>` : ''}
           ${cakeStr   ? `<span class="match-meta-item">${cakeStr}</span>`   : ''}
+          ${invStr    ? `<span class="match-meta-item">${invStr}</span>`    : ''}
         </div>` : ''}
     </div>`
 }
@@ -603,6 +605,23 @@ function openMatchDetail(matchId) {
     ${lineupSection}
 
     <div class="detail-section">
+      <h4>🔄 Invallers</h4>
+      <div id="invaller-list">
+        ${(match.invallers || []).length
+          ? (match.invallers).map((name, i) => `
+              <div class="invaller-row">
+                <span>${escHtml(name)}</span>
+                <button class="btn-icon-danger" data-action="remove-invaller" data-index="${i}" title="Verwijderen">✕</button>
+              </div>`).join('')
+          : '<p class="hint" style="margin:0 0 8px">Nog geen invallers toegevoegd.</p>'}
+      </div>
+      <div class="invaller-add">
+        <input type="text" id="input-invaller" class="invaller-input" placeholder="Naam invaller">
+        <button class="btn-primary" data-action="add-invaller">+ Toevoegen</button>
+      </div>
+    </div>
+
+    <div class="detail-section">
       <h4>🎾 Uitslag</h4>
       <div class="result-form">
         <div class="result-inputs">
@@ -637,6 +656,30 @@ function closeOverlay() {
   document.getElementById('overlay-match').classList.add('hidden')
   document.body.style.overflow = ''
   selectedMatchId = null
+}
+
+function addInvaller(matchId) {
+  const input = document.getElementById('input-invaller')
+  if (!input) return
+  const name = input.value.trim()
+  if (!name) return
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  if (!match.invallers) match.invallers = []
+  match.invallers.push(name)
+  input.value = ''
+  saveState()
+  renderMatchList()
+  openMatchDetail(matchId)
+}
+
+function removeInvaller(matchId, index) {
+  const match = state.matches.find(m => m.id === matchId)
+  if (!match) return
+  match.invallers = (match.invallers || []).filter((_, i) => i !== index)
+  saveState()
+  renderMatchList()
+  openMatchDetail(matchId)
 }
 
 // ============================================================
@@ -686,7 +729,7 @@ function saveMatchForm(e) {
     const match = state.matches.find(m => m.id === matchId)
     if (match) Object.assign(match, data)
   } else {
-    state.matches.push({ id: generateId(), lineup: {}, drivers: [], cakeDuty: [], result: null, ...data })
+    state.matches.push({ id: generateId(), lineup: {}, drivers: [], cakeDuty: [], invallers: [], result: null, ...data })
   }
 
   saveState()
@@ -1001,6 +1044,12 @@ document.addEventListener('click', e => {
       break
     case 'save-result':
       if (selectedMatchId) saveResult(selectedMatchId)
+      break
+    case 'add-invaller':
+      if (selectedMatchId) addInvaller(selectedMatchId)
+      break
+    case 'remove-invaller':
+      if (selectedMatchId) removeInvaller(selectedMatchId, parseInt(btn.dataset.index))
       break
     case 'open-maps':
       window.open(`https://maps.google.com/?q=${encodeURIComponent(btn.dataset.location)}`, '_blank')
