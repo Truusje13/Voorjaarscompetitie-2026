@@ -459,7 +459,7 @@ function renderKnltbLink() {
   const el = document.getElementById('standings-knltb-btn')
   if (!el) return
   if (state.knltbUrl) {
-    el.innerHTML = `<a href="${escAttr(state.knltbUrl)}" target="_blank" rel="noopener" class="knltb-link-btn">🔗 Bekijk stand op KNLTB</a>`
+    el.innerHTML = `<button class="knltb-link-btn" data-action="open-knltb">🔗 Bekijk stand op KNLTB</button>`
   } else {
     el.innerHTML = `<p class="knltb-hint">Voeg de KNLTB-link toe via ⚙️ Instellingen zodra de competitie is begonnen.</p>`
   }
@@ -777,7 +777,9 @@ function openSettings() {
 async function saveSettings() {
   const name = document.getElementById('input-teamname').value.trim()
   if (name) state.teamName = name
-  state.knltbUrl = document.getElementById('input-knltb-url').value.trim()
+  let knltbUrl = document.getElementById('input-knltb-url').value.trim()
+  if (knltbUrl && !knltbUrl.startsWith('http')) knltbUrl = 'https://' + knltbUrl
+  state.knltbUrl = knltbUrl
 
   const photoInput = document.getElementById('input-team-photo')
   if (photoInput.files[0]) {
@@ -1067,6 +1069,7 @@ document.addEventListener('click', e => {
     case 'add-standing':    openStandingForm(null); break
     case 'edit-standing':   openStandingForm(btn.dataset.id); break
     case 'delete-standing': deleteStanding(btn.dataset.id); break
+    case 'open-knltb':      if (state.knltbUrl) window.open(state.knltbUrl, '_blank'); break
   }
 })
 
