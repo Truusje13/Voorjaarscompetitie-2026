@@ -639,19 +639,22 @@ function openMatchDetail(matchId) {
     <div class="detail-section">
       <h4>🎾 Uitslag</h4>
       <div class="result-form">
-        <div class="result-inputs">
+        <div class="result-score-row">
           <input type="text" id="input-score" class="input-score"
             placeholder="bv. 3-1" maxlength="10"
             value="${escAttr(match.result?.score ?? '')}">
-          <input type="text" id="input-sets" class="input-sets"
-            placeholder="bv. 6-3 4-6 7-5"
-            value="${escAttr(match.result?.sets ?? '')}">
+          <span class="result-score-label">Overall rubberscore</span>
         </div>
-        <div class="input-labels">
-          <span>Rubberscore</span>
-          <span>Setstanden (optioneel)</span>
+        <div class="rubber-inputs">
+          ${[0,1,2,3].map(i => `
+            <div class="rubber-row">
+              <span class="rubber-label">Rubber ${i+1}</span>
+              <input type="text" class="input-rubber" data-rubber="${i}"
+                placeholder="bv. 6-3 6-2"
+                value="${escAttr(match.result?.rubbers?.[i] ?? '')}">
+            </div>`).join('')}
         </div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px">
           <button class="btn-primary" data-action="save-result">Uitslag opslaan</button>
           ${resultBadgeHtml(match)}
         </div>
@@ -911,9 +914,9 @@ function toggleCake(matchId, playerId, checked) {
 function saveResult(matchId) {
   const match = state.matches.find(m => m.id === matchId)
   if (!match) return
-  const score = document.getElementById('input-score').value.trim()
-  const sets  = document.getElementById('input-sets').value.trim()
-  match.result = score ? { score, sets } : null
+  const score   = document.getElementById('input-score').value.trim()
+  const rubbers = Array.from(document.querySelectorAll('.input-rubber')).map(el => el.value.trim())
+  match.result = score ? { score, rubbers } : null
   saveState()
   renderMatchList()
   openMatchDetail(matchId)
