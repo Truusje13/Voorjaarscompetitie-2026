@@ -3,7 +3,7 @@
    Zorgt dat de app installeerbaar is en offline werkt
    ============================================================ */
 
-const CACHE = 'tennis-app-v2'
+const CACHE = 'tennis-app-v3'
 const STATIC = [
   './',
   './index.html',

@@ -205,10 +205,13 @@ main {
 }
 
 .match-location {
+  display: block;
   font-size: .82rem;
   color: var(--text-muted);
   margin-bottom: 4px;
+  text-decoration: none;
 }
+a.match-location:hover { color: var(--green-mid); }
 
 .match-players {
   font-size: .87rem;
@@ -804,21 +807,13 @@ main {
 }
 .check-item-avatar input { accent-color: var(--green-dark); cursor: pointer; }
 
-/* Google Maps */
-[data-action="open-maps"] { cursor: pointer; }
-[data-action="open-maps"]:hover { color: var(--green-mid); }
-
+/* Google Maps links */
 .maps-icon { font-size: .8em; opacity: .7; }
 
 .maps-link {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
   color: var(--green-mid);
   font-size: inherit;
   font-family: inherit;
-  text-align: left;
   text-decoration: underline dotted var(--text-muted);
 }
 .maps-link:hover { color: var(--green-dark); }
@@ -849,10 +844,13 @@ main {
 }
 
 .training-meta {
+  display: block;
   font-size: .84rem;
   color: var(--text-muted);
   margin-top: 2px;
+  text-decoration: none;
 }
+a.training-meta:hover { color: var(--green-mid); }
 
 .training-avail-summary {
   display: flex;
