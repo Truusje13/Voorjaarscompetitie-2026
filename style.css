@@ -421,6 +421,16 @@ a.match-location:hover { color: var(--green-mid); }
 .lineup-btn.active-reserve { background: #fff3e0; border-color: #f59e0b;         color: #92400e; }
 .lineup-btn.active-out     { background: #fee2e2; border-color: var(--red);      color: var(--red); }
 
+/* Als er een status is gezet: verberg de niet-gekozen knoppen */
+.lineup-row.status-plays   .lineup-btn:not(.active-plays),
+.lineup-row.status-reserve .lineup-btn:not(.active-reserve),
+.lineup-row.status-out     .lineup-btn:not(.active-out) { display: none; }
+
+/* Subtiel ✎ op actieve knop: geeft aan dat je er op kunt tikken om te wijzigen */
+.lineup-btn.active-plays::after,
+.lineup-btn.active-reserve::after,
+.lineup-btn.active-out::after { content: ' ✎'; font-size: .7rem; opacity: .6; }
+
 /* Samenvatting-balk bovenaan opstelling */
 .lineup-summary {
   display: flex;
