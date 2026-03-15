@@ -1228,3 +1228,113 @@ a.training-meta:hover { color: var(--green-mid); }
   transition: all .15s;
 }
 .chat-identity-btn:hover { background: var(--green-pale); border-color: var(--green-mid); }
+
+/* ============================================================
+   LINEUP OVERVIEW (Beschikbaarheidsoverzicht)
+   ============================================================ */
+.lov-wrap {
+  margin: 8px 0 16px;
+  background: white;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+.lov-title {
+  font-size: .9rem;
+  font-weight: 700;
+  padding: 10px 14px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  background: #f9fafb;
+}
+.lov-scroll { overflow-x: auto; padding: 10px 12px 12px; }
+
+.lov-table { border-collapse: collapse; }
+
+.lov-th-name {
+  text-align: left;
+  font-size: .72rem;
+  color: var(--text-muted);
+  padding: 0 10px 4px 0;
+  min-width: 72px;
+}
+.lov-th-date {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  padding: 0 3px 4px;
+  white-space: nowrap;
+  min-width: 46px;
+}
+.lov-th-type {
+  font-size: .65rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.lov-th-count {
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 0 4px 8px;
+  white-space: nowrap;
+}
+
+.lov-td-name {
+  font-size: .82rem;
+  font-weight: 600;
+  padding: 3px 10px 3px 0;
+  white-space: nowrap;
+}
+.lov-cell-td { padding: 3px; text-align: center; }
+.lov-cell-inner {
+  width: 36px;
+  height: 22px;
+  border-radius: 4px;
+  margin: 0 auto;
+}
+.lov-plays   { background: #86efac; }
+.lov-reserve { background: #93c5fd; }
+.lov-out     { background: #fca5a5; }
+.lov-unknown { background: #f1f5f9; }
+
+.lov-td-count {
+  font-size: .82rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--green-dark);
+  padding-left: 10px;
+}
+.lov-td-foot {
+  font-size: .72rem;
+  color: var(--text-muted);
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+}
+.lov-td-foot-count {
+  font-size: .75rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text);
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.lov-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.lov-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+.lov-legend-dot { width: 16px; height: 12px; flex-shrink: 0; }

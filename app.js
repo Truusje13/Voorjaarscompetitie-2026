@@ -190,6 +190,7 @@ function renderMatchList() {
         <p>Nog geen wedstrijden gepland.</p>
         <p>Klik op "+ Toevoegen" om te beginnen.</p>
       </div>`
+    renderLineupOverview()
     return
   }
 
@@ -209,6 +210,83 @@ function renderMatchList() {
   }
 
   container.innerHTML = html
+  renderLineupOverview()
+}
+
+function renderLineupOverview() {
+  const container = document.getElementById('lineup-overview')
+  if (!container) return
+
+  const matches = [...(state.matches || [])].sort((a, b) => a.date.localeCompare(b.date))
+  const players = state.players || []
+
+  // Alleen tonen als er minstens 1 match én 1 speler is, én er ergens lineup-data is
+  const hasData = matches.length && players.length &&
+    matches.some(m => m.lineup && Object.keys(m.lineup).length > 0)
+  if (!hasData) { container.innerHTML = ''; return }
+
+  const shortDate = dateStr => {
+    if (!dateStr) return ''
+    const d = new Date(dateStr + 'T00:00:00')
+    return `${d.getDate()}-${MONTHS[d.getMonth()]}`
+  }
+
+  const cell = status => {
+    const cls = status === 'plays' ? 'lov-plays'
+              : status === 'reserve' ? 'lov-reserve'
+              : status === 'out' ? 'lov-out' : 'lov-unknown'
+    return `<td class="lov-cell-td"><div class="lov-cell-inner ${cls}"></div></td>`
+  }
+
+  const playsCount  = p => matches.filter(m => m.lineup?.[p.id] === 'plays').length
+  const matchPlays  = m => players.filter(p => m.lineup?.[p.id] === 'plays').length
+  const matchReserve = m => players.filter(p => m.lineup?.[p.id] === 'reserve').length
+
+  container.innerHTML = `
+    <div class="lov-wrap">
+      <h3 class="lov-title">Beschikbaarheidsoverzicht</h3>
+      <div class="lov-scroll">
+        <table class="lov-table">
+          <thead>
+            <tr>
+              <th class="lov-th-name"></th>
+              ${matches.map(m => `
+                <th class="lov-th-date" title="${escAttr(m.opponent)}">
+                  ${shortDate(m.date)}
+                  <div class="lov-th-type">${m.isHome ? 'T' : 'U'}</div>
+                </th>`).join('')}
+              <th class="lov-th-count">Aantal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${players.map(p => `
+              <tr>
+                <td class="lov-td-name">${escHtml(p.name.split(' ')[0])}</td>
+                ${matches.map(m => cell(m.lineup?.[p.id] ?? null)).join('')}
+                <td class="lov-td-count">${playsCount(p) || ''}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td class="lov-td-foot">Speelt</td>
+              ${matches.map(m => `<td class="lov-td-foot-count">${matchPlays(m) || ''}</td>`).join('')}
+              <td></td>
+            </tr>
+            ${matches.some(m => matchReserve(m) > 0) ? `
+            <tr>
+              <td class="lov-td-foot">Reserve</td>
+              ${matches.map(m => `<td class="lov-td-foot-count">${matchReserve(m) || ''}</td>`).join('')}
+              <td></td>
+            </tr>` : ''}
+          </tfoot>
+        </table>
+        <div class="lov-legend">
+          <span class="lov-legend-item"><span class="lov-cell-inner lov-plays lov-legend-dot"></span>Speelt</span>
+          <span class="lov-legend-item"><span class="lov-cell-inner lov-reserve lov-legend-dot"></span>Reserve</span>
+          <span class="lov-legend-item"><span class="lov-cell-inner lov-out lov-legend-dot"></span>Verhinderd</span>
+        </div>
+      </div>
+    </div>`
 }
 
 function matchCardHtml(match, isPast) {
