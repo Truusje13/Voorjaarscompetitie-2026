@@ -91,6 +91,8 @@ function setupSync() {
     renderTrainingList()
     renderStandings()
     renderKnltbLink()
+    renderLineupOverview()
+    runNotificationChecks()
     // Overlays NIET opnieuw renderen om invulvelden niet te verstoren
   })
 }
@@ -1167,6 +1169,7 @@ document.addEventListener('click', e => {
     tabBtn.classList.add('active')
     document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active')
     activeTab = tabBtn.dataset.tab
+    clearTabBadge(activeTab)
     if (activeTab === 'chat') openChatTab()
     return
   }
@@ -1270,6 +1273,75 @@ document.getElementById('overlay-training').addEventListener('click', e => {
 })
 
 // ============================================================
+// NOTIFICATIES & BADGES
+// ============================================================
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission()
+  }
+}
+
+function showBrowserNotification(title, body) {
+  if (Notification.permission !== 'granted') return
+  navigator.serviceWorker?.ready.then(reg => {
+    reg.showNotification(title, { body, icon: './icon.svg', badge: './icon.svg' })
+  }).catch(() => new Notification(title, { body, icon: './icon.svg' }))
+}
+
+function showTabBadge(tabName) {
+  document.getElementById(`badge-${tabName}`)?.classList.remove('hidden')
+}
+
+function clearTabBadge(tabName) {
+  document.getElementById(`badge-${tabName}`)?.classList.add('hidden')
+}
+
+function checkUpcomingMatches() {
+  const now    = new Date(); now.setHours(0, 0, 0, 0)
+  const cutoff = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+  const soon   = (state.matches || []).filter(m => {
+    const d = new Date(m.date + 'T00:00:00')
+    return d >= now && d <= cutoff
+  })
+  if (!soon.length) return
+  const match = soon[0]
+  showTabBadge('matches')
+  const key = 'notifiedMatch_' + match.id
+  if (!localStorage.getItem(key)) {
+    showBrowserNotification(
+      '🎾 Wedstrijd aanstaande!',
+      `${match.isHome ? 'Thuis' : 'Uit'} tegen ${match.opponent} op ${formatDate(match.date)}`
+    )
+    localStorage.setItem(key, '1')
+  }
+}
+
+function checkNewTrainings() {
+  const count  = (state.trainings || []).length
+  const stored = parseInt(localStorage.getItem('lastTrainingCount') || '-1')
+  if (stored >= 0 && count > stored) {
+    showTabBadge('training')
+    const newest = [...(state.trainings || [])].sort((a, b) => b.date?.localeCompare(a.date))[0]
+    showBrowserNotification(
+      '📅 Nieuw trainingsvoorstel!',
+      newest ? `${formatDate(newest.date)}${newest.time ? ' om ' + newest.time : ''}` : 'Bekijk het voorstel in de app.'
+    )
+  }
+  localStorage.setItem('lastTrainingCount', count)
+}
+
+function checkNewChatMessages() {
+  // Badge voor chat wordt afgehandeld via onSnapshot in setupChatListener
+}
+
+function runNotificationChecks() {
+  checkUpcomingMatches()
+  checkNewTrainings()
+}
+
+// ============================================================
 // CHAT
 // ============================================================
 
@@ -1280,8 +1352,17 @@ function formatChatTime(date) {
 function setupChatListener() {
   if (chatUnsubscribe) return
   const q = query(CHAT_COL, orderBy('createdAt', 'asc'), limit(200))
+  let firstSnap = true
   chatUnsubscribe = onSnapshot(q, snap => {
-    renderChatMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    renderChatMessages(messages)
+    // Badge tonen als je niet op de chat-tab zit en er nieuwe berichten zijn
+    if (!firstSnap && activeTab !== 'chat') {
+      const lastCount = parseInt(localStorage.getItem('lastChatCount') || '0')
+      if (messages.length > lastCount) showTabBadge('chat')
+    }
+    localStorage.setItem('lastChatCount', messages.length)
+    firstSnap = false
   })
 }
 
@@ -1368,6 +1449,9 @@ async function init() {
   renderTrainingList()
   renderStandings()
   renderKnltbLink()
+  renderLineupOverview()
+  await requestNotificationPermission()
+  runNotificationChecks()
 }
 
 init()

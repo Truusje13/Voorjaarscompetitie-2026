@@ -61,6 +61,19 @@ body {
 }
 .tab-nav::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
+/* Notificatie-badge op tab-knop */
+.tab-btn { position: relative; }
+.tab-badge {
+  position: absolute;
+  top: 6px; right: 2px;
+  width: 8px; height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid var(--green-dark);
+  pointer-events: none;
+}
+.tab-badge.hidden { display: none; }
+
 .tab-btn {
   flex: 1;
   background: none;
