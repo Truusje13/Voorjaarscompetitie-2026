@@ -295,14 +295,12 @@ function matchCardHtml(match, isPast) {
   const playing = (state.players || []).filter(p => match.lineup?.[p.id] === 'plays')
   const reserve  = (state.players || []).filter(p => match.lineup?.[p.id] === 'reserve')
   const drivers  = (match.drivers  || []).map(playerName)
-  const cake     = (match.cakeDuty || []).map(playerName)
 
   const playingStr = playing.length
     ? playing.map(p => p.name).join(', ')
     : '<em>Nog geen opstelling</em>'
   const reserveStr = reserve.length ? `Reserve: ${reserve.map(p => p.name).join(', ')}` : ''
   const driverStr  = drivers.length ? `🚗 ${drivers.join(', ')}` : ''
-  const cakeStr    = cake.length    ? `🍰 ${cake.join(', ')}`    : ''
   const invStr     = (match.invallers || []).length ? `🔄 ${match.invallers.join(', ')}` : ''
 
   return `
@@ -319,10 +317,9 @@ function matchCardHtml(match, isPast) {
       ${match.location ? `<a class="match-location" href="https://maps.google.com/?q=${encodeURIComponent(match.location)}" target="_blank" rel="noopener">📍 ${escHtml(match.location)} <span class="maps-icon">🗺️</span></a>` : ''}
       <div class="match-players">${playingStr}</div>
       ${reserveStr ? `<div class="match-reserve">${reserveStr}</div>` : ''}
-      ${(driverStr || cakeStr || invStr) ? `
+      ${(driverStr || invStr) ? `
         <div class="match-meta">
           ${driverStr ? `<span class="match-meta-item">${driverStr}</span>` : ''}
-          ${cakeStr   ? `<span class="match-meta-item">${cakeStr}</span>`   : ''}
           ${invStr    ? `<span class="match-meta-item">${invStr}</span>`    : ''}
         </div>` : ''}
     </div>`
@@ -700,19 +697,7 @@ function openMatchDetail(matchId) {
         </div>
       </div>` : ''}
 
-      ${match.isHome ? `
-      <div class="detail-section">
-        <h4>🍰 Gebak — wie neemt het mee?</h4>
-        <div class="check-grid">
-          ${state.players.map(p => `
-            <label class="check-item-avatar">
-              <input type="checkbox" data-action="toggle-cake" data-player="${p.id}"
-                ${(match.cakeDuty || []).includes(p.id) ? 'checked' : ''}>
-              ${avatarHtml(p, true)}
-              <span>${escHtml(p.name)}</span>
-            </label>`).join('')}
-        </div>
-      </div>` : ''}`
+      `
 
   document.getElementById('overlay-content').innerHTML = `
     <div class="detail-info">
@@ -855,7 +840,7 @@ function saveMatchForm(e) {
     const match = state.matches.find(m => m.id === matchId)
     if (match) Object.assign(match, data)
   } else {
-    state.matches.push({ id: generateId(), lineup: {}, drivers: [], cakeDuty: [], invallers: [], result: null, ...data })
+    state.matches.push({ id: generateId(), lineup: {}, drivers: [], invallers: [], result: null, ...data })
   }
 
   saveState()
@@ -1017,16 +1002,6 @@ function toggleDriver(matchId, playerId, checked) {
   renderMatchList()
 }
 
-function toggleCake(matchId, playerId, checked) {
-  const match = state.matches.find(m => m.id === matchId)
-  if (!match) return
-  if (!match.cakeDuty) match.cakeDuty = []
-  match.cakeDuty = checked
-    ? [...new Set([...match.cakeDuty, playerId])]
-    : match.cakeDuty.filter(id => id !== playerId)
-  saveState()
-  renderMatchList()
-}
 
 function saveResult(matchId) {
   const match = state.matches.find(m => m.id === matchId)
@@ -1070,7 +1045,6 @@ function deletePlayer(playerId) {
   state.matches.forEach(m => {
     if (m.lineup) delete m.lineup[playerId]
     m.drivers  = (m.drivers  || []).filter(id => id !== playerId)
-    m.cakeDuty = (m.cakeDuty || []).filter(id => id !== playerId)
   })
   saveState()
   renderPlayerList()
@@ -1248,7 +1222,6 @@ document.addEventListener('change', e => {
   const input = e.target
   if (!selectedMatchId) return
   if (input.dataset.action === 'toggle-driver') toggleDriver(selectedMatchId, input.dataset.player, input.checked)
-  if (input.dataset.action === 'toggle-cake')   toggleCake(selectedMatchId, input.dataset.player, input.checked)
 })
 
 document.getElementById('overlay-match').addEventListener('click', e => {
