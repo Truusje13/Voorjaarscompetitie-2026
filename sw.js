@@ -3,7 +3,7 @@
    Zorgt dat de app installeerbaar is en offline werkt
    ============================================================ */
 
-const CACHE = 'tennis-app-v12'
+const CACHE = 'tennis-app-v13'
 
 // Bij installatie: sla ALLEEN het icoontje en manifest op
 self.addEventListener('install', e => {

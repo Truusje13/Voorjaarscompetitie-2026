@@ -1,10 +1,9 @@
 /* ============================================================
-   TENNIS TEAM APP — met Firebase Firestore sync
+   TENNIS TEAM APP — Najaarscompetitie 2026
    ============================================================ */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js'
-import { getFirestore, doc, getDoc, setDoc, onSnapshot,
-         collection, addDoc, query, orderBy, limit, serverTimestamp }
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
   from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js'
 
 // ============================================================
@@ -20,35 +19,27 @@ const firebaseConfig = {
   appId:             '1:855290831568:web:689914acb456fccc1d74d5'
 }
 
-const fbApp  = initializeApp(firebaseConfig)
-const db     = getFirestore(fbApp)
-const STATE    = doc(db, 'tennis', 'state')
-const CHAT_COL = collection(db, 'chat')
+const fbApp = initializeApp(firebaseConfig)
+const db    = getFirestore(fbApp)
+const STATE = doc(db, 'najaar2026', 'state')
 
 // ============================================================
 // STATE
 // ============================================================
 
 const DEMO_STATE = {
-  teamName:  'Voorjaarscompetitie 2026',
+  teamName:  'Najaarscompetitie 2026',
   teamPhoto: null,
   players:   [],
   matches:   [],
-  trainings: [],
   standings: [],
   knltbUrl:  ''
 }
 
 let state = {}
 
-// Current UI state
 let activeTab       = 'matches'
 let selectedMatchId = null
-
-// Chat identity (opgeslagen in localStorage, geen login nodig)
-let myPlayerId   = localStorage.getItem('chatMyPlayerId')   || null
-let myPlayerName = localStorage.getItem('chatMyPlayerName') || null
-let chatUnsubscribe = null
 
 // ============================================================
 // PERSISTENCE — Firebase
@@ -59,7 +50,6 @@ async function loadState() {
     const snap = await getDoc(STATE)
     if (snap.exists()) {
       state = snap.data()
-      state.trainings = state.trainings || []
       state.standings = state.standings || []
       if (state.knltbUrl === undefined) state.knltbUrl = ''
     } else {
@@ -76,24 +66,20 @@ function saveState() {
   setDoc(STATE, state).catch(e => console.error('Firebase opslaan mislukt:', e))
 }
 
-// Real-time sync: als een teamgenoot iets wijzigt, update jij ook meteen
 function setupSync() {
   onSnapshot(STATE, snap => {
     if (!snap.exists()) return
     state = snap.data()
-    state.trainings = state.trainings || []
     state.standings = state.standings || []
     if (state.knltbUrl === undefined) state.knltbUrl = ''
     renderHeader()
     renderTeamPhoto()
     renderMatchList()
     renderPlayerList()
-    renderTrainingList()
     renderStandings()
     renderKnltbLink()
     renderLineupOverview()
     runNotificationChecks()
-    // Overlays NIET opnieuw renderen om invulvelden niet te verstoren
   })
 }
 
@@ -114,8 +100,8 @@ function formatDate(dateStr) {
   return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
 }
 
-function getPlayer(id)    { return state.players.find(p => p.id === id) }
-function playerName(id)   { return getPlayer(id)?.name ?? '?' }
+function getPlayer(id)  { return state.players.find(p => p.id === id) }
+function playerName(id) { return getPlayer(id)?.name ?? '?' }
 
 function getInitials(name) {
   return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -129,7 +115,6 @@ function avatarHtml(player, small = false) {
   return `<span class="avatar-initials ${cls}">${escHtml(getInitials(player?.name ?? '?'))}</span>`
 }
 
-// Compress an image file to a base64 JPEG string
 function compressImage(file, maxW, maxH, quality) {
   return new Promise(resolve => {
     const reader = new FileReader()
@@ -222,7 +207,6 @@ function renderLineupOverview() {
   const matches = [...(state.matches || [])].sort((a, b) => a.date.localeCompare(b.date))
   const players = state.players || []
 
-  // Alleen tonen als er minstens 1 match én 1 speler is, én er ergens lineup-data is
   const hasData = matches.length && players.length &&
     matches.some(m => m.lineup && Object.keys(m.lineup).length > 0)
   if (!hasData) { container.innerHTML = ''; return }
@@ -240,8 +224,8 @@ function renderLineupOverview() {
     return `<td class="lov-cell-td"><div class="lov-cell-inner ${cls}"></div></td>`
   }
 
-  const playsCount  = p => matches.filter(m => m.lineup?.[p.id] === 'plays').length
-  const matchPlays  = m => players.filter(p => m.lineup?.[p.id] === 'plays').length
+  const playsCount   = p => matches.filter(m => m.lineup?.[p.id] === 'plays').length
+  const matchPlays   = m => players.filter(p => m.lineup?.[p.id] === 'plays').length
   const matchReserve = m => players.filter(p => m.lineup?.[p.id] === 'reserve').length
 
   container.innerHTML = `
@@ -352,187 +336,6 @@ function renderPlayerList() {
         <button class="btn-icon-danger" data-action="delete-player" data-id="${p.id}" title="Verwijderen">🗑️</button>
       </div>
     </div>`).join('')
-}
-
-// ============================================================
-// RENDERING — TRAINING LIST
-// ============================================================
-
-let selectedTrainingId = null
-
-function renderTrainingList() {
-  const container = document.getElementById('training-list')
-  if (!container) return
-  const trainings = state.trainings || []
-
-  if (trainings.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <p>Nog geen trainingen voorgesteld.</p>
-        <p>Klik op "+ Voorstel" om een datum te prikken.</p>
-      </div>`
-    return
-  }
-
-  const today   = new Date().toISOString().slice(0, 10)
-  const sorted  = [...trainings].sort((a, b) => a.date.localeCompare(b.date))
-  const upcoming = sorted.filter(t => t.date >= today)
-  const past     = sorted.filter(t => t.date <  today).reverse()
-
-  let html = ''
-  if (upcoming.length) {
-    html += '<h3 class="section-label">Aankomend</h3>'
-    html += upcoming.map(t => trainingCardHtml(t, false)).join('')
-  }
-  if (past.length) {
-    html += '<h3 class="section-label">Geweest</h3>'
-    html += past.map(t => trainingCardHtml(t, true)).join('')
-  }
-  container.innerHTML = html
-}
-
-function trainingCardHtml(training, isPast) {
-  const avail   = training.availability || {}
-  const players = state.players || []
-  const yes     = players.filter(p => avail[p.id] === 'yes').length
-  const no      = players.filter(p => avail[p.id] === 'no').length
-  const maybe   = players.filter(p => avail[p.id] === 'maybe').length
-
-  return `
-    <div class="training-card ${isPast ? 'past' : ''}" data-action="open-training" data-id="${training.id}">
-      <div class="training-date">${formatDate(training.date)}${training.time ? ' om ' + training.time : ''}</div>
-      ${training.location ? `<a class="training-meta" href="https://maps.google.com/?q=${encodeURIComponent(training.location)}" target="_blank" rel="noopener">📍 ${escHtml(training.location)} <span class="maps-icon">🗺️</span></a>` : ''}
-      ${training.notes    ? `<div class="training-meta">💬 ${escHtml(training.notes)}</div>` : ''}
-      <div class="training-avail-summary">
-        <span class="avail-pill avail-yes">✅ ${yes}</span>
-        <span class="avail-pill avail-maybe">❓ ${maybe}</span>
-        <span class="avail-pill avail-no">❌ ${no}</span>
-      </div>
-    </div>`
-}
-
-function openTrainingDetail(trainingId) {
-  const training = (state.trainings || []).find(t => t.id === trainingId)
-  if (!training) return
-
-  selectedTrainingId = trainingId
-
-  document.getElementById('overlay-training-title').textContent =
-    `Training ${formatDate(training.date)}${training.time ? ' ' + training.time : ''}`
-
-  const avail   = training.availability || {}
-  const players = state.players || []
-
-  const playerRows = players.length === 0
-    ? `<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>`
-    : players.map(p => {
-        const s = avail[p.id] ?? null
-        return `
-          <div class="lineup-row">
-            ${avatarHtml(p, true)}
-            <span class="lineup-name">${escHtml(p.name)}</span>
-            <div class="lineup-btns">
-              <button class="avail-btn ${s === 'yes'   ? 'active-yes'   : ''}"
-                data-action="set-avail" data-player="${p.id}" data-status="yes">✅</button>
-              <button class="avail-btn ${s === 'maybe' ? 'active-maybe' : ''}"
-                data-action="set-avail" data-player="${p.id}" data-status="maybe">❓</button>
-              <button class="avail-btn ${s === 'no'    ? 'active-no'    : ''}"
-                data-action="set-avail" data-player="${p.id}" data-status="no">❌</button>
-            </div>
-          </div>`
-      }).join('')
-
-  document.getElementById('overlay-training-content').innerHTML = `
-    <div class="detail-info">
-      <div class="detail-row">
-        <span class="detail-label">Datum</span>
-        <span>${formatDate(training.date)}</span>
-      </div>
-      ${training.time     ? `<div class="detail-row"><span class="detail-label">Tijd</span><span>${training.time}</span></div>` : ''}
-      ${training.location ? `<div class="detail-row"><span class="detail-label">Locatie</span><a class="maps-link" href="https://maps.google.com/?q=${encodeURIComponent(training.location)}" target="_blank" rel="noopener">📍 ${escHtml(training.location)} 🗺️</a></div>` : ''}
-      ${training.notes    ? `<div class="detail-row"><span class="detail-label">Notities</span><span>${escHtml(training.notes)}</span></div>` : ''}
-    </div>
-
-    <div class="detail-section">
-      <h4>🙋 Wie kan er?</h4>
-      <div class="lineup-list">${playerRows}</div>
-    </div>
-
-    <div class="detail-actions">
-      <button class="btn-secondary" data-action="edit-training">✏️ Bewerken</button>
-      <button class="btn-danger"    data-action="delete-training">🗑️ Verwijderen</button>
-    </div>`
-
-  document.getElementById('overlay-training').classList.remove('hidden')
-  document.body.style.overflow = 'hidden'
-}
-
-function closeTrainingOverlay() {
-  document.getElementById('overlay-training').classList.add('hidden')
-  document.body.style.overflow = ''
-  selectedTrainingId = null
-}
-
-function setTrainingAvailability(trainingId, playerId, status) {
-  const training = (state.trainings || []).find(t => t.id === trainingId)
-  if (!training) return
-  if (!training.availability) training.availability = {}
-  training.availability[playerId] === status
-    ? delete training.availability[playerId]
-    : (training.availability[playerId] = status)
-  saveState()
-  renderTrainingList()
-  openTrainingDetail(trainingId)
-}
-
-function openTrainingForm(trainingId) {
-  const form = document.getElementById('form-training')
-  form.reset()
-  if (trainingId) {
-    const t = (state.trainings || []).find(x => x.id === trainingId)
-    if (!t) return
-    document.getElementById('modal-training-title').textContent = 'Training bewerken'
-    form.elements.trainingId.value = t.id
-    form.elements.date.value       = t.date
-    form.elements.time.value       = t.time     || ''
-    form.elements.location.value   = t.location || ''
-    form.elements.notes.value      = t.notes    || ''
-  } else {
-    document.getElementById('modal-training-title').textContent = 'Training voorstellen'
-    form.elements.trainingId.value = ''
-  }
-  document.getElementById('modal-training').classList.remove('hidden')
-}
-
-function saveTrainingForm(e) {
-  e.preventDefault()
-  const form = e.target
-  const data = {
-    date:     form.elements.date.value,
-    time:     form.elements.time.value,
-    location: form.elements.location.value.trim(),
-    notes:    form.elements.notes.value.trim(),
-  }
-  if (!state.trainings) state.trainings = []
-  const trainingId = form.elements.trainingId.value
-  if (trainingId) {
-    const t = state.trainings.find(x => x.id === trainingId)
-    if (t) Object.assign(t, data)
-  } else {
-    state.trainings.push({ id: generateId(), availability: {}, ...data })
-  }
-  saveState()
-  closeModal('modal-training')
-  renderTrainingList()
-  if (trainingId && trainingId === selectedTrainingId) openTrainingDetail(trainingId)
-}
-
-function deleteTraining(trainingId) {
-  if (!confirm('Weet je zeker dat je dit trainingsvoorstel wilt verwijderen?')) return
-  state.trainings = (state.trainings || []).filter(t => t.id !== trainingId)
-  saveState()
-  closeTrainingOverlay()
-  renderTrainingList()
 }
 
 // ============================================================
@@ -876,7 +679,6 @@ function savePlayerForm(e) {
 
 function openSettings() {
   document.getElementById('input-teamname').value = state.teamName
-  // Show current team photo preview
   const preview = document.getElementById('team-photo-settings-preview')
   preview.innerHTML = state.teamPhoto
     ? `<img src="${state.teamPhoto}" class="photo-preview" style="width:80px;height:80px">`
@@ -912,7 +714,6 @@ function openEditPlayerModal(playerId) {
   form.elements.playerId.value = playerId
   form.elements.name.value     = player.name
 
-  // Show current photo or initials
   const preview = document.getElementById('edit-player-photo-preview')
   if (player.photo) {
     preview.outerHTML = `<img id="edit-player-photo-preview" class="photo-preview" src="${player.photo}" alt="${escHtml(player.name)}">`
@@ -921,13 +722,10 @@ function openEditPlayerModal(playerId) {
     preview.className = 'photo-preview-initials'
   }
 
-  // Show/hide remove button
   const removeBtn = document.getElementById('btn-remove-player-photo')
   removeBtn.classList.toggle('hidden', !player.photo)
 
-  // Reset file input
   document.getElementById('edit-player-photo-input').value = ''
-
   document.getElementById('modal-edit-player').classList.remove('hidden')
 }
 
@@ -949,11 +747,9 @@ async function saveEditPlayerForm(e) {
   closeModal('modal-edit-player')
   renderPlayerList()
 
-  // Re-render match detail if open (to update avatars)
   if (selectedMatchId) openMatchDetail(selectedMatchId)
 }
 
-// Live photo preview in edit-player modal
 document.getElementById('edit-player-photo-input').addEventListener('change', async e => {
   const file = e.target.files[0]
   if (!file) return
@@ -964,11 +760,9 @@ document.getElementById('edit-player-photo-input').addEventListener('change', as
   img.className = 'photo-preview'
   img.src = data
   container.replaceWith(img)
-  // Toon verwijder-knop zodra er een (nieuwe) foto is gekozen
   document.getElementById('btn-remove-player-photo').classList.remove('hidden')
 })
 
-// Live team photo preview in settings
 document.getElementById('input-team-photo').addEventListener('change', async e => {
   const file = e.target.files[0]
   if (!file) return
@@ -1002,7 +796,6 @@ function toggleDriver(matchId, playerId, checked) {
   renderMatchList()
 }
 
-
 function saveResult(matchId) {
   const match = state.matches.find(m => m.id === matchId)
   if (!match) return
@@ -1030,7 +823,6 @@ function removePlayerPhoto() {
   saveState()
   renderPlayerList()
   if (selectedMatchId) openMatchDetail(selectedMatchId)
-  // Reset preview naar initialen
   const prev = document.getElementById('edit-player-photo-preview')
   if (prev) prev.outerHTML = `<div id="edit-player-photo-preview" class="photo-preview-initials">${escHtml(getInitials(player.name))}</div>`
   document.getElementById('edit-player-photo-input').value = ''
@@ -1061,14 +853,14 @@ function openStandingForm(standingId) {
     const s = (state.standings || []).find(x => x.id === standingId)
     if (!s) return
     document.getElementById('modal-standing-title').textContent = 'Ploeg bewerken'
-    form.elements.standingId.value = s.id
-    form.elements.team.value       = s.team
-    form.elements.won.value        = s.won         || 0
-    form.elements.draw.value       = s.draw        || 0
-    form.elements.lost.value       = s.lost        || 0
-    form.elements.points.value     = s.points      || 0
-    form.elements.setsFor.value    = s.setsFor     || 0
-    form.elements.setsAgainst.value = s.setsAgainst || 0
+    form.elements.standingId.value   = s.id
+    form.elements.team.value         = s.team
+    form.elements.won.value          = s.won         || 0
+    form.elements.draw.value         = s.draw        || 0
+    form.elements.lost.value         = s.lost        || 0
+    form.elements.points.value       = s.points      || 0
+    form.elements.setsFor.value      = s.setsFor     || 0
+    form.elements.setsAgainst.value  = s.setsAgainst || 0
   } else {
     document.getElementById('modal-standing-title').textContent = 'Ploeg toevoegen'
     form.elements.standingId.value = ''
@@ -1133,7 +925,6 @@ function escAttr(str) { return escHtml(str) }
 // ============================================================
 
 document.addEventListener('click', e => {
-  // Laat link-klikken (bijv. Google Maps) gewoon door
   if (e.target.closest('a')) return
 
   const tabBtn = e.target.closest('.tab-btn')
@@ -1144,7 +935,6 @@ document.addEventListener('click', e => {
     document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active')
     activeTab = tabBtn.dataset.tab
     clearTabBadge(activeTab)
-    if (activeTab === 'chat') openChatTab()
     return
   }
 
@@ -1179,14 +969,6 @@ document.addEventListener('click', e => {
     case 'open-maps':
       window.open(`https://maps.google.com/?q=${encodeURIComponent(btn.dataset.location)}`, '_blank')
       break
-    case 'open-training':         openTrainingDetail(btn.dataset.id); break
-    case 'close-training-overlay': closeTrainingOverlay(); break
-    case 'add-training':          openTrainingForm(null); break
-    case 'edit-training':         openTrainingForm(selectedTrainingId); break
-    case 'delete-training':       deleteTraining(selectedTrainingId); break
-    case 'set-avail':
-      if (selectedTrainingId) setTrainingAvailability(selectedTrainingId, btn.dataset.player, btn.dataset.status)
-      break
     case 'open-settings':   openSettings(); break
     case 'save-settings':   saveSettings(); break
     case 'add-standing':    openStandingForm(null); break
@@ -1194,27 +976,6 @@ document.addEventListener('click', e => {
     case 'delete-standing': deleteStanding(btn.dataset.id); break
     case 'open-knltb':      if (state.knltbUrl) window.open(state.knltbUrl, '_blank'); break
     case 'save-knltb-url':  saveKnltbUrl(); break
-    case 'change-chat-identity': openChatIdentityModal(); break
-    case 'set-chat-identity':
-      myPlayerId   = btn.dataset.pid
-      myPlayerName = btn.dataset.pname
-      localStorage.setItem('chatMyPlayerId',   myPlayerId)
-      localStorage.setItem('chatMyPlayerName', myPlayerName)
-      closeModal('modal-chat-identity')
-      renderChatIdentityBar()
-      break
-    case 'save-chat-identity-custom': {
-      const name = document.getElementById('input-chat-custom-name').value.trim()
-      if (name) {
-        myPlayerId   = 'guest_' + Date.now()
-        myPlayerName = name
-        localStorage.setItem('chatMyPlayerId',   myPlayerId)
-        localStorage.setItem('chatMyPlayerName', myPlayerName)
-        closeModal('modal-chat-identity')
-        renderChatIdentityBar()
-      }
-      break
-    }
   }
 })
 
@@ -1238,12 +999,6 @@ document.getElementById('form-match').addEventListener('submit', saveMatchForm)
 document.getElementById('form-player').addEventListener('submit', savePlayerForm)
 document.getElementById('form-edit-player').addEventListener('submit', saveEditPlayerForm)
 document.getElementById('form-standing').addEventListener('submit', saveStandingForm)
-document.getElementById('form-training').addEventListener('submit', saveTrainingForm)
-document.getElementById('form-chat').addEventListener('submit', e => { e.preventDefault(); sendChatMessage() })
-
-document.getElementById('overlay-training').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeTrainingOverlay()
-})
 
 // ============================================================
 // NOTIFICATIES & BADGES
@@ -1291,119 +1046,8 @@ function checkUpcomingMatches() {
   }
 }
 
-function checkNewTrainings() {
-  const count  = (state.trainings || []).length
-  const stored = parseInt(localStorage.getItem('lastTrainingCount') || '-1')
-  if (stored >= 0 && count > stored) {
-    showTabBadge('training')
-    const newest = [...(state.trainings || [])].sort((a, b) => b.date?.localeCompare(a.date))[0]
-    showBrowserNotification(
-      '📅 Nieuw trainingsvoorstel!',
-      newest ? `${formatDate(newest.date)}${newest.time ? ' om ' + newest.time : ''}` : 'Bekijk het voorstel in de app.'
-    )
-  }
-  localStorage.setItem('lastTrainingCount', count)
-}
-
-function checkNewChatMessages() {
-  // Badge voor chat wordt afgehandeld via onSnapshot in setupChatListener
-}
-
 function runNotificationChecks() {
   checkUpcomingMatches()
-  checkNewTrainings()
-}
-
-// ============================================================
-// CHAT
-// ============================================================
-
-function formatChatTime(date) {
-  return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
-}
-
-function setupChatListener() {
-  if (chatUnsubscribe) return
-  const q = query(CHAT_COL, orderBy('createdAt', 'asc'), limit(200))
-  let firstSnap = true
-  chatUnsubscribe = onSnapshot(q, snap => {
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    renderChatMessages(messages)
-    // Badge tonen als je niet op de chat-tab zit en er nieuwe berichten zijn
-    if (!firstSnap && activeTab !== 'chat') {
-      const lastCount = parseInt(localStorage.getItem('lastChatCount') || '0')
-      if (messages.length > lastCount) showTabBadge('chat')
-    }
-    localStorage.setItem('lastChatCount', messages.length)
-    firstSnap = false
-  })
-}
-
-function renderChatIdentityBar() {
-  const bar = document.getElementById('chat-identity-bar')
-  if (!bar) return
-  bar.innerHTML = myPlayerName ? `
-    <div class="chat-identity-bar">
-      <span>Je chat als <strong>${escHtml(myPlayerName)}</strong></span>
-      <button class="btn-sm btn-secondary" data-action="change-chat-identity">Wijzigen</button>
-    </div>` : ''
-}
-
-function renderChatMessages(messages) {
-  const container = document.getElementById('chat-messages')
-  if (!container) return
-  if (!messages || messages.length === 0) {
-    container.innerHTML = '<p class="chat-empty">Nog geen berichten. Stuur het eerste bericht! 🎾</p>'
-    return
-  }
-  container.innerHTML = messages.map(msg => {
-    const isMe   = msg.playerId === myPlayerId
-    const player = state.players.find(p => p.id === msg.playerId)
-    const time   = msg.createdAt?.toDate ? formatChatTime(msg.createdAt.toDate()) : ''
-    return `
-      <div class="chat-msg ${isMe ? 'chat-msg-me' : 'chat-msg-other'}">
-        ${!isMe ? `<div class="chat-avatar-wrap">${avatarHtml({ name: msg.playerName, photo: player?.photo }, true)}</div>` : ''}
-        <div class="chat-bubble-wrap">
-          ${!isMe ? `<span class="chat-sender">${escHtml(msg.playerName)}</span>` : ''}
-          <div class="chat-bubble">${escHtml(msg.text)}</div>
-          <span class="chat-time">${time}</span>
-        </div>
-      </div>`
-  }).join('')
-  container.scrollTop = container.scrollHeight
-}
-
-async function sendChatMessage() {
-  const input = document.getElementById('chat-input')
-  const text  = input?.value.trim()
-  if (!text || !myPlayerName) return
-  input.value = ''
-  await addDoc(CHAT_COL, {
-    playerId:   myPlayerId || ('guest_' + Date.now()),
-    playerName: myPlayerName,
-    text,
-    createdAt:  serverTimestamp()
-  })
-}
-
-function openChatIdentityModal() {
-  const grid = document.getElementById('chat-identity-options')
-  grid.innerHTML = state.players.length
-    ? state.players.map(p => `
-        <button class="chat-identity-btn" data-action="set-chat-identity"
-          data-pid="${p.id}" data-pname="${escAttr(p.name)}">
-          ${avatarHtml(p, true)}
-          <span>${escHtml(p.name)}</span>
-        </button>`).join('')
-    : '<p class="hint">Voeg eerst speelsters toe via het tabblad "Speelsters".</p>'
-  document.getElementById('input-chat-custom-name').value = ''
-  document.getElementById('modal-chat-identity').classList.remove('hidden')
-}
-
-function openChatTab() {
-  setupChatListener()
-  renderChatIdentityBar()
-  if (!myPlayerName) openChatIdentityModal()
 }
 
 // ============================================================
@@ -1419,7 +1063,6 @@ async function init() {
   renderHeader()
   renderMatchList()
   renderPlayerList()
-  renderTrainingList()
   renderStandings()
   renderKnltbLink()
   renderLineupOverview()
@@ -1429,13 +1072,11 @@ async function init() {
 
 init()
 
-// Service worker registreren (maakt app installeerbaar)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .catch(err => console.log('SW registratie mislukt:', err))
   })
-  // Automatisch herladen als een nieuwe SW de controle overneemt
   let refreshing = false
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return

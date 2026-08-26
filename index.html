@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tennis Team</title>
+  <title>Najaarscompetitie 2026</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a4fa0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Tennis">
+  <meta name="apple-mobile-web-app-title" content="Najaar">
   <link rel="apple-touch-icon" href="icon.svg">
 </head>
 <body>
@@ -22,9 +22,7 @@
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="matches">Wedstrijden<span class="tab-badge hidden" id="badge-matches"></span></button>
         <button class="tab-btn" data-tab="players">Speelsters</button>
-        <button class="tab-btn" data-tab="training">Training<span class="tab-badge hidden" id="badge-training"></span></button>
         <button class="tab-btn" data-tab="standings">Stand</button>
-        <button class="tab-btn" data-tab="chat">💬 Chat<span class="tab-badge hidden" id="badge-chat"></span></button>
       </nav>
     </header>
 
@@ -49,15 +47,6 @@
         <div id="players-list"></div>
       </div>
 
-      <!-- Training tab -->
-      <div id="tab-training" class="tab-content">
-        <div class="content-header">
-          <h2>Trainingen</h2>
-          <button class="btn-primary" data-action="add-training">+ Voorstel</button>
-        </div>
-        <div id="training-list"></div>
-      </div>
-
       <!-- Stand tab -->
       <div id="tab-standings" class="tab-content">
         <div id="standings-knltb-btn"></div>
@@ -67,28 +56,7 @@
         </div>
         <div id="standings-table"></div>
       </div>
-
-      <!-- Chat tab -->
-      <div id="tab-chat" class="tab-content">
-        <div id="chat-identity-bar"></div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <form id="form-chat" class="chat-input-form">
-          <input type="text" id="chat-input" placeholder="Typ een bericht..." autocomplete="off" maxlength="500">
-          <button type="submit" class="btn-primary chat-send-btn">➤</button>
-        </form>
-      </div>
     </main>
-  </div>
-
-  <!-- Training detail overlay -->
-  <div id="overlay-training" class="overlay hidden">
-    <div class="overlay-panel">
-      <div class="overlay-header">
-        <h2 id="overlay-training-title">Training</h2>
-        <button class="icon-btn" data-action="close-training-overlay">✕</button>
-      </div>
-      <div id="overlay-training-content" class="overlay-body"></div>
-    </div>
   </div>
 
   <!-- Match detail overlay -->
@@ -230,41 +198,6 @@
     </div>
   </div>
 
-  <!-- Modal: Training voorstellen -->
-  <div id="modal-training" class="modal hidden">
-    <div class="modal-dialog modal-dialog-sm">
-      <div class="modal-header">
-        <h3 id="modal-training-title">Training voorstellen</h3>
-        <button class="icon-btn modal-close" data-modal="modal-training">✕</button>
-      </div>
-      <form id="form-training" class="modal-body">
-        <input type="hidden" name="trainingId">
-        <div class="form-group">
-          <label>Datum *</label>
-          <input type="date" name="date" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Tijd</label>
-            <input type="time" name="time">
-          </div>
-          <div class="form-group">
-            <label>Locatie</label>
-            <input type="text" name="location" placeholder="Baan / park">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Notities</label>
-          <textarea name="notes" rows="2" placeholder="Bijv. 'Looptraining'"></textarea>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary modal-close" data-modal="modal-training">Annuleren</button>
-          <button type="submit" class="btn-primary">Opslaan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- Modal: Stand invoeren -->
   <div id="modal-standing" class="modal hidden">
     <div class="modal-dialog modal-dialog-sm">
@@ -313,27 +246,6 @@
           <button type="submit" class="btn-primary">Opslaan</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- Modal: Chat identiteit kiezen -->
-  <div id="modal-chat-identity" class="modal hidden">
-    <div class="modal-dialog modal-dialog-sm">
-      <div class="modal-header">
-        <h3>Wie ben jij?</h3>
-        <button class="icon-btn modal-close" data-modal="modal-chat-identity">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="hint" style="margin-bottom:12px">Kies je naam zodat anderen weten wie er schrijft.</p>
-        <div id="chat-identity-options" class="chat-identity-grid"></div>
-        <div class="form-group" style="margin-top:16px">
-          <label>Of typ een andere naam</label>
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <input type="text" id="input-chat-custom-name" placeholder="Jouw naam..." maxlength="30" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit">
-            <button type="button" class="btn-primary btn-sm" data-action="save-chat-identity-custom">Bevestigen</button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
