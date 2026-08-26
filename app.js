@@ -115,21 +115,47 @@ function avatarHtml(player, small = false) {
   return `<span class="avatar-initials ${cls}">${escHtml(getInitials(player?.name ?? '?'))}</span>`
 }
 
-async function compressImage(file, maxW, maxH, quality) {
-  let bitmap
-  try {
-    bitmap = await createImageBitmap(file)
-  } catch {
-    throw new Error('Afbeelding kon niet worden geladen')
-  }
-  let w = bitmap.width, h = bitmap.height
-  if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-  if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-  const canvas = document.createElement('canvas')
-  canvas.width = w; canvas.height = h
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
-  bitmap.close()
-  return canvas.toDataURL('image/jpeg', quality)
+function compressImage(file, maxW, maxH, quality) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('Selecteer een afbeeldingsbestand (JPEG of PNG)'))
+    }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen'))
+    reader.onload = e => {
+      const dataUrl = e.target.result
+      const img = new Image()
+      img.onerror = () => {
+        // Formaat niet ondersteund door browser: gebruik bestand direct als het klein genoeg is
+        if (dataUrl.length <= 800000) {
+          resolve(dataUrl)
+        } else {
+          reject(new Error('Dit afbeeldingsformaat wordt niet ondersteund. Maak een screenshot van de foto en probeer dat.'))
+        }
+      }
+      img.onload = () => {
+        try {
+          let w = img.width, h = img.height
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+          const canvas = document.createElement('canvas')
+          canvas.width = w; canvas.height = h
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
+          ctx.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch (err) {
+          if (dataUrl.length <= 800000) {
+            resolve(dataUrl)
+          } else {
+            reject(new Error('Foto kon niet worden verkleind. Probeer een kleinere foto.'))
+          }
+        }
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 function parseScore(str) {
@@ -693,7 +719,7 @@ async function saveSettings() {
       state.teamPhoto = await compressImage(photoInput.files[0], 800, 400, 0.8)
       photoInput.value = ''
     } catch (err) {
-      alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+      alert(err.message || 'Foto kon niet worden geladen.')
       return
     }
   }
@@ -745,7 +771,7 @@ async function saveEditPlayerForm(e) {
     try {
       player.photo = await compressImage(photoFile, 200, 200, 0.75)
     } catch (err) {
-      alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+      alert(err.message || 'Foto kon niet worden geladen.')
       return
     }
   }
