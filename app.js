@@ -115,23 +115,21 @@ function avatarHtml(player, small = false) {
   return `<span class="avatar-initials ${cls}">${escHtml(getInitials(player?.name ?? '?'))}</span>`
 }
 
-function compressImage(file, maxW, maxH, quality) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Afbeelding kon niet worden geladen')) }
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      let w = img.width, h = img.height
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-      const canvas = document.createElement('canvas')
-      canvas.width = w; canvas.height = h
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-      resolve(canvas.toDataURL('image/jpeg', quality))
-    }
-    img.src = url
-  })
+async function compressImage(file, maxW, maxH, quality) {
+  let bitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    throw new Error('Afbeelding kon niet worden geladen')
+  }
+  let w = bitmap.width, h = bitmap.height
+  if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+  if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+  const canvas = document.createElement('canvas')
+  canvas.width = w; canvas.height = h
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+  bitmap.close()
+  return canvas.toDataURL('image/jpeg', quality)
 }
 
 function parseScore(str) {
