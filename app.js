@@ -117,23 +117,20 @@ function avatarHtml(player, small = false) {
 
 function compressImage(file, maxW, maxH, quality) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen'))
-    reader.onload = e => {
-      const img = new Image()
-      img.onerror = () => reject(new Error('Afbeelding kon niet worden geladen'))
-      img.onload = () => {
-        let w = img.width, h = img.height
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      }
-      img.src = e.target.result
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Afbeelding kon niet worden geladen')) }
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let w = img.width, h = img.height
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', quality))
     }
-    reader.readAsDataURL(file)
+    img.src = url
   })
 }
 
@@ -765,14 +762,18 @@ async function saveEditPlayerForm(e) {
 document.getElementById('edit-player-photo-input').addEventListener('change', async e => {
   const file = e.target.files[0]
   if (!file) return
-  const data = await compressImage(file, 200, 200, 0.75)
-  const container = document.querySelector('#edit-player-photo-preview, .photo-preview-initials')
-  const img = document.createElement('img')
-  img.id = 'edit-player-photo-preview'
-  img.className = 'photo-preview'
-  img.src = data
-  container.replaceWith(img)
-  document.getElementById('btn-remove-player-photo').classList.remove('hidden')
+  try {
+    const data = await compressImage(file, 200, 200, 0.75)
+    const container = document.querySelector('#edit-player-photo-preview, .photo-preview-initials')
+    const img = document.createElement('img')
+    img.id = 'edit-player-photo-preview'
+    img.className = 'photo-preview'
+    img.src = data
+    container.replaceWith(img)
+    document.getElementById('btn-remove-player-photo').classList.remove('hidden')
+  } catch (err) {
+    alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+  }
 })
 
 document.getElementById('input-team-photo').addEventListener('change', async e => {
