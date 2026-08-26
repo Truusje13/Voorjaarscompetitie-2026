@@ -118,37 +118,42 @@ function avatarHtml(player, small = false) {
 function compressImage(file, maxW, maxH, quality) {
   return new Promise((resolve, reject) => {
     if (!file) return reject(new Error('Geen bestand geselecteerd'))
-    if (file.size === 0) return reject(new Error('Foto lijkt leeg. Staat de foto op je telefoon zelf (niet alleen in de cloud)?'))
-    if (!file.type.startsWith('image/')) {
-      return reject(new Error(`Geen afbeelding geselecteerd (type: ${file.type || 'onbekend'})`))
+    if (file.size === 0) return reject(new Error('Foto is leeg of niet beschikbaar op dit apparaat. Probeer de foto eerst te downloaden.'))
+
+    const lowerName = (file.name || '').toLowerCase()
+    if (file.type === 'image/heic' || file.type === 'image/heif' ||
+        lowerName.endsWith('.heic') || lowerName.endsWith('.heif')) {
+      return reject(new Error('Deze foto is in HEIF-formaat, dat werkt niet in de browser.\n\nMaak een screenshot van de foto en gebruik dat als teamfoto.'))
     }
 
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error(`Foto kon niet worden geopend.\nType: ${file.type}\nGrootte: ${Math.round(file.size / 1024)} KB\n\nProbeer een andere foto, of maak een screenshot en gebruik dat.`))
+    if (file.type && !file.type.startsWith('image/')) {
+      return reject(new Error(`Selecteer een afbeelding (jpg/png). Dit bestand is: ${file.type}`))
     }
 
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      let w = img.width, h = img.height
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-      const canvas = document.createElement('canvas')
-      canvas.width = w; canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
-      try {
-        ctx.drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      } catch (err) {
-        reject(new Error(`Fout bij verwerken: ${err.message}`))
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen. Probeer een andere foto.'))
+    reader.onload = e => {
+      const dataUrl = e.target.result
+      const img = new Image()
+      img.onerror = () => reject(new Error(`Foto kon niet worden geopend (${file.type || 'onbekend type'}, ${Math.round(file.size / 1024)} KB).\n\nMaak een screenshot van de foto en gebruik dat.`))
+      img.onload = () => {
+        try {
+          let w = img.width, h = img.height
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+          const canvas = document.createElement('canvas')
+          canvas.width = w; canvas.height = h
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
+          ctx.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch (err) {
+          reject(new Error(`Verwerken mislukt: ${err.message}`))
+        }
       }
+      img.src = dataUrl
     }
-
-    img.src = url
+    reader.readAsDataURL(file)
   })
 }
 
