@@ -117,44 +117,38 @@ function avatarHtml(player, small = false) {
 
 function compressImage(file, maxW, maxH, quality) {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith('image/')) {
-      return reject(new Error('Selecteer een afbeeldingsbestand (JPEG of PNG)'))
+    if (!file) return reject(new Error('Geen bestand geselecteerd'))
+    if (file.size === 0) return reject(new Error('Foto lijkt leeg. Staat de foto op je telefoon zelf (niet alleen in de cloud)?'))
+    if (!file.type.startsWith('image/')) {
+      return reject(new Error(`Geen afbeelding geselecteerd (type: ${file.type || 'onbekend'})`))
     }
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen'))
-    reader.onload = e => {
-      const dataUrl = e.target.result
-      const img = new Image()
-      img.onerror = () => {
-        // Formaat niet ondersteund door browser: gebruik bestand direct als het klein genoeg is
-        if (dataUrl.length <= 800000) {
-          resolve(dataUrl)
-        } else {
-          reject(new Error('Dit afbeeldingsformaat wordt niet ondersteund. Maak een screenshot van de foto en probeer dat.'))
-        }
-      }
-      img.onload = () => {
-        try {
-          let w = img.width, h = img.height
-          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-          const canvas = document.createElement('canvas')
-          canvas.width = w; canvas.height = h
-          const ctx = canvas.getContext('2d')
-          if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
-          ctx.drawImage(img, 0, 0, w, h)
-          resolve(canvas.toDataURL('image/jpeg', quality))
-        } catch (err) {
-          if (dataUrl.length <= 800000) {
-            resolve(dataUrl)
-          } else {
-            reject(new Error('Foto kon niet worden verkleind. Probeer een kleinere foto.'))
-          }
-        }
-      }
-      img.src = dataUrl
+
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error(`Foto kon niet worden geopend.\nType: ${file.type}\nGrootte: ${Math.round(file.size / 1024)} KB\n\nProbeer een andere foto, of maak een screenshot en gebruik dat.`))
     }
-    reader.readAsDataURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let w = img.width, h = img.height
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
+      try {
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      } catch (err) {
+        reject(new Error(`Fout bij verwerken: ${err.message}`))
+      }
+    }
+
+    img.src = url
   })
 }
 
@@ -796,7 +790,7 @@ document.getElementById('edit-player-photo-input').addEventListener('change', as
     container.replaceWith(img)
     document.getElementById('btn-remove-player-photo').classList.remove('hidden')
   } catch (err) {
-    alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+    alert(err.message || 'Foto kon niet worden geladen.')
   }
 })
 
