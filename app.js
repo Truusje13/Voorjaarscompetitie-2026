@@ -115,45 +115,67 @@ function avatarHtml(player, small = false) {
   return `<span class="avatar-initials ${cls}">${escHtml(getInitials(player?.name ?? '?'))}</span>`
 }
 
-function compressImage(file, maxW, maxH, quality) {
-  return new Promise((resolve, reject) => {
-    if (!file) return reject(new Error('Geen bestand geselecteerd'))
-    if (file.size === 0) return reject(new Error('Foto is leeg of niet beschikbaar op dit apparaat. Probeer de foto eerst te downloaden.'))
+async function compressImage(file, maxW, maxH, quality) {
+  if (!file) throw new Error('Geen bestand geselecteerd')
+  if (file.size === 0) throw new Error('Foto is leeg of niet beschikbaar op dit apparaat.')
 
-    const lowerName = (file.name || '').toLowerCase()
-    if (file.type === 'image/heic' || file.type === 'image/heif' ||
-        lowerName.endsWith('.heic') || lowerName.endsWith('.heif')) {
-      return reject(new Error('Deze foto is in HEIF-formaat, dat werkt niet in de browser.\n\nMaak een screenshot van de foto en gebruik dat als teamfoto.'))
-    }
+  const lowerName = (file.name || '').toLowerCase()
+  if (file.type === 'image/heic' || file.type === 'image/heif' ||
+      lowerName.endsWith('.heic') || lowerName.endsWith('.heif')) {
+    throw new Error('Dit is een HEIF-foto. Maak een screenshot van de foto en gebruik dat.')
+  }
+  if (file.type && !file.type.startsWith('image/')) {
+    throw new Error(`Selecteer een afbeelding (jpg/png). Dit bestand is: ${file.type}`)
+  }
 
-    if (file.type && !file.type.startsWith('image/')) {
-      return reject(new Error(`Selecteer een afbeelding (jpg/png). Dit bestand is: ${file.type}`))
-    }
-
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen. Probeer een andere foto.'))
-    reader.onload = e => {
-      const dataUrl = e.target.result
-      const img = new Image()
-      img.onerror = () => reject(new Error(`Foto kon niet worden geopend (${file.type || 'onbekend type'}, ${Math.round(file.size / 1024)} KB).\n\nMaak een screenshot van de foto en gebruik dat.`))
-      img.onload = () => {
-        try {
-          let w = img.width, h = img.height
-          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
-          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
-          const canvas = document.createElement('canvas')
-          canvas.width = w; canvas.height = h
-          const ctx = canvas.getContext('2d')
-          if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
-          ctx.drawImage(img, 0, 0, w, h)
-          resolve(canvas.toDataURL('image/jpeg', quality))
-        } catch (err) {
-          reject(new Error(`Verwerken mislukt: ${err.message}`))
-        }
+  // Methode 1: file.arrayBuffer() — werkt beter in geïnstalleerde PWA op Android
+  let dataUrl = null
+  if (typeof file.arrayBuffer === 'function') {
+    try {
+      const buffer = await file.arrayBuffer()
+      const mimeType = file.type || 'image/jpeg'
+      const bytes = new Uint8Array(buffer)
+      const chunks = []
+      for (let i = 0; i < bytes.length; i += 8192) {
+        chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)))
       }
-      img.src = dataUrl
+      dataUrl = `data:${mimeType};base64,${btoa(chunks.join(''))}`
+    } catch (_) {
+      dataUrl = null
     }
-    reader.readAsDataURL(file)
+  }
+
+  // Methode 2: FileReader als fallback
+  if (!dataUrl) {
+    dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error(
+        'Foto kon niet worden gelezen.\n\nTip: open de app via Chrome (niet als geïnstalleerde app) om foto\'s toe te voegen.'
+      ))
+      reader.onload = e => resolve(e.target.result)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onerror = () => reject(new Error(`Foto kon niet worden geopend (${file.type || '?'}, ${Math.round(file.size / 1024)} KB).`))
+    img.onload = () => {
+      try {
+        let w = img.width, h = img.height
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('Canvas niet beschikbaar op dit apparaat'))
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      } catch (err) {
+        reject(new Error(`Verwerken mislukt: ${err.message}`))
+      }
+    }
+    img.src = dataUrl
   })
 }
 
@@ -802,9 +824,13 @@ document.getElementById('edit-player-photo-input').addEventListener('change', as
 document.getElementById('input-team-photo').addEventListener('change', async e => {
   const file = e.target.files[0]
   if (!file) return
-  const data = await compressImage(file, 800, 400, 0.8)
-  const preview = document.getElementById('team-photo-settings-preview')
-  preview.innerHTML = `<img src="${data}" class="photo-preview" style="width:80px;height:80px">`
+  try {
+    const data = await compressImage(file, 800, 400, 0.8)
+    const preview = document.getElementById('team-photo-settings-preview')
+    preview.innerHTML = `<img src="${data}" class="photo-preview" style="width:80px;height:80px">`
+  } catch (err) {
+    alert(err.message || 'Foto kon niet worden geladen.')
+  }
 })
 
 // ============================================================
