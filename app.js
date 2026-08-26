@@ -116,10 +116,12 @@ function avatarHtml(player, small = false) {
 }
 
 function compressImage(file, maxW, maxH, quality) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen'))
     reader.onload = e => {
       const img = new Image()
+      img.onerror = () => reject(new Error('Afbeelding kon niet worden geladen'))
       img.onload = () => {
         let w = img.width, h = img.height
         if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
@@ -692,8 +694,13 @@ async function saveSettings() {
 
   const photoInput = document.getElementById('input-team-photo')
   if (photoInput.files[0]) {
-    state.teamPhoto = await compressImage(photoInput.files[0], 800, 400, 0.8)
-    photoInput.value = ''
+    try {
+      state.teamPhoto = await compressImage(photoInput.files[0], 800, 400, 0.8)
+      photoInput.value = ''
+    } catch (err) {
+      alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+      return
+    }
   }
 
   saveState()
@@ -740,7 +747,12 @@ async function saveEditPlayerForm(e) {
 
   const photoFile = form.elements.photo.files[0]
   if (photoFile) {
-    player.photo = await compressImage(photoFile, 200, 200, 0.75)
+    try {
+      player.photo = await compressImage(photoFile, 200, 200, 0.75)
+    } catch (err) {
+      alert('Foto kon niet worden geladen. Probeer een ander bestand (JPEG of PNG).')
+      return
+    }
   }
 
   saveState()
